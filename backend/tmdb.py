@@ -1,6 +1,14 @@
+# backend/tmdb.py
+import os
 import requests
+from dotenv import load_dotenv
 
-API_KEY = "b120f028f631155432b3f8f0bb8a596b"
+load_dotenv()
+
+API_KEY = os.environ.get("TMDB_API_KEY")
+if not API_KEY:
+    raise RuntimeError("TMDB_API_KEY non définie. Ajoute-la en variable d'environnement ou dans un .env")
+
 BASE_URL = "https://api.themoviedb.org/3"
 
 def search_movie(title: str):
