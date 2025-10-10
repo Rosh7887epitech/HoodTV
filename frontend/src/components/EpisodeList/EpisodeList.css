@@ -1,0 +1,72 @@
+.episode-list {
+  padding: 20px 0;
+}
+
+.series-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.series-header h2 {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.episode-count {
+  margin: 0;
+  color: #666;
+  font-style: italic;
+}
+
+.season-section {
+  margin-bottom: 40px;
+}
+
+.season-title {
+  margin: 0 0 20px 0;
+  font-size: 1.4rem;
+  color: #444;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.season-count {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.episodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.empty-episodes {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-style: italic;
+  background: #f9f9f9;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .series-header h2 {
+    font-size: 1.6rem;
+  }
+  
+  .season-title {
+    font-size: 1.2rem;
+  }
+  
+  .episodes-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}

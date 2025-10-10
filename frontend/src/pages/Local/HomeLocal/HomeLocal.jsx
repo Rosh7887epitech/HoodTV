@@ -1,5 +1,5 @@
 import "./HomeLocal.css";
-import BackButton from "../../components/BackButton/BackButton";
+import BackButton from "../../../components/BackButton/BackButton";
 
 export default function HomeLocal() {
   return (
@@ -11,9 +11,9 @@ export default function HomeLocal() {
           <p className="hero-subtitle">Explorez vos contenus stockés localement</p>
         </div>
         <div className="categories-local-section">
-            <div className="category-item">📽️ Films</div>
-            <div className="category-item">📺 Séries</div>
-            <div className="category-item">📸 Photos</div>
+            <a href="/local-movies" className="category-item">📽️ Films</a>
+            <a href="/local-series" className="category-item">📺 Séries</a>
+            <a href="/local-photos" className="category-item">📸 Photos</a>
         </div>
       </div>
     </div>

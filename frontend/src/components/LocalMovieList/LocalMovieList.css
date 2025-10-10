@@ -1,0 +1,32 @@
+.local-movies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.no-local-movies {
+  text-align: center;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  margin-top: 20px;
+}
+
+.no-local-movies p {
+  color: #b8b8b8;
+  margin-bottom: 10px;
+}
+
+.folder-info {
+  font-size: 0.9rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .local-movies-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
