@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import "./FilmLocal.css";
-import BackButton from "../../components/BackButton/BackButton";
-import LocalMovieList from "../../components/LocalMovieList/LocalMovieList";
-import "../../components/LocalMovieCard/LocalMovieCard.css";
-import "../../components/LocalMovieList/LocalMovieList.css";
+import BackButton from "../../../components/BackButton/BackButton";
+import LocalMovieList from "../../../components/LocalMovieList/LocalMovieList";
+import "../../../components/LocalMovieCard/LocalMovieCard.css";
+import "../../../components/LocalMovieList/LocalMovieList.css";
 
 export default function FilmLocal() {
   const [movies, setMovies] = useState([]);

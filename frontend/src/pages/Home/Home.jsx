@@ -12,7 +12,7 @@ export default function Home() {
         <div className="categories-section">
             <Card 
               title="Streaming" 
-              img="https://img.icons8.com/ios-filled/100/000000/streaming.png"
+              img="https://img.icons8.com/fluency/100/tv.png"
               link="/streaming"
             />
             <Card 

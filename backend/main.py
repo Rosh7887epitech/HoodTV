@@ -139,6 +139,140 @@ def get_local_movies():
         return {"error": f"Erreur lors du scan: {str(e)}", "movies": [], "scanned_folders": scanned_folders}
 
 
+@app.get("/photos/local")
+def get_local_photos():
+    possible_folders = [
+        "/home/rosh/Images/Photo",
+    ]
+    
+    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.svg', '.ico', '.raw', '.heic'}
+    
+    local_photos = []
+    scanned_folders = []
+    
+    try:
+        for photos_folder in possible_folders:
+            if os.path.exists(photos_folder):
+                scanned_folders.append(photos_folder)
+                for root, dirs, files in os.walk(photos_folder):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        file_extension = Path(file).suffix.lower()
+                        
+                        if file_extension in image_extensions:
+                            file_size = os.path.getsize(file_path)
+                            
+                            title = Path(file).stem
+                            
+                            local_photos.append({
+                                "title": title,
+                                "filename": file,
+                                "path": file_path,
+                                "size_bytes": file_size,
+                                "extension": file_extension,
+                                "folder": os.path.relpath(root, photos_folder),
+                                "source_folder": photos_folder
+                            })
+        
+        return {
+            "photos": local_photos,
+            "total": len(local_photos),
+            "scanned_folders": scanned_folders
+        }
+    except Exception as e:
+        return {"error": f"Erreur lors du scan: {str(e)}", "photos": [], "scanned_folders": scanned_folders}
+
+
+@app.get("/view-image/{file_path:path}")
+def view_image(file_path: str):
+    """
+    Affichage d'images avec support des formats courants
+    """
+    file_path = unquote(file_path)
+    if not os.path.exists(file_path):
+        return {"error": "Fichier non trouvé"}
+    
+    file_extension = Path(file_path).suffix.lower()
+    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.svg', '.ico'}
+    
+    if file_extension not in image_extensions:
+        return {"error": "Type de fichier non supporté"}
+    
+    content_type, _ = mimetypes.guess_type(file_path)
+    if content_type is None:
+        if file_extension in {'.jpg', '.jpeg'}:
+            content_type = "image/jpeg"
+        elif file_extension == '.png':
+            content_type = "image/png"
+        elif file_extension == '.gif':
+            content_type = "image/gif"
+        elif file_extension == '.webp':
+            content_type = "image/webp"
+        else:
+            content_type = "image/jpeg"
+    
+    return FileResponse(
+        file_path,
+        media_type=content_type,
+        headers={"Cache-Control": "max-age=3600"}
+    )
+
+
+@app.get("/thumbnail/{file_path:path}")
+def get_thumbnail(file_path: str):
+    """
+    Génération de miniatures pour les images
+    """
+    try:
+        from PIL import Image
+        
+        file_path = unquote(file_path)
+        if not os.path.exists(file_path):
+            return {"error": "Fichier non trouvé"}
+        
+        file_extension = Path(file_path).suffix.lower()
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'}
+        
+        if file_extension not in image_extensions:
+            return {"error": "Type de fichier non supporté"}
+        
+        # Créer un dossier temporaire pour les miniatures si nécessaire
+        thumbnails_dir = "/tmp/hoodtv_thumbnails"
+        os.makedirs(thumbnails_dir, exist_ok=True)
+        
+        # Nom du fichier miniature basé sur le hash du chemin original
+        import hashlib
+        thumbnail_name = hashlib.md5(file_path.encode()).hexdigest() + "_thumb.jpg"
+        thumbnail_path = os.path.join(thumbnails_dir, thumbnail_name)
+        
+        # Générer la miniature si elle n'existe pas
+        if not os.path.exists(thumbnail_path):
+            with Image.open(file_path) as img:
+                # Convertir en RGB si nécessaire (pour les PNG avec transparence)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                
+                # Redimensionner en gardant les proportions
+                img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+                img.save(thumbnail_path, "JPEG", quality=85)
+        
+        return FileResponse(
+            thumbnail_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "max-age=86400"}  # Cache pendant 24h
+        )
+        
+    except ImportError:
+        # Si PIL n'est pas disponible, retourner l'image originale
+        return FileResponse(
+            file_path,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "max-age=3600"}
+        )
+    except Exception as e:
+        return {"error": f"Erreur lors de la génération de la miniature: {str(e)}"}
+
+
 @app.get("/series/local")
 def get_local_series():
     possible_folders = [
@@ -147,41 +281,103 @@ def get_local_series():
     
     video_extensions = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'}
     
-    local_series = []
+    series_folders = []
     scanned_folders = []
     
     try:
-        for series_folder in possible_folders:
-            if os.path.exists(series_folder):
-                scanned_folders.append(series_folder)
-                for root, dirs, files in os.walk(series_folder):
-                    for file in files:
-                        file_path = os.path.join(root, file)
-                        file_extension = Path(file).suffix.lower()
+        for base_folder in possible_folders:
+            if os.path.exists(base_folder):
+                scanned_folders.append(base_folder)
+                
+                # Récupérer les dossiers de séries (niveau 1)
+                for item in os.listdir(base_folder):
+                    item_path = os.path.join(base_folder, item)
+                    if os.path.isdir(item_path):
+                        # Compter les épisodes dans ce dossier
+                        episode_count = 0
+                        total_size = 0
                         
-                        if file_extension in video_extensions:
-                            file_size = os.path.getsize(file_path)
-                            file_size_mb = round(file_size / (1024 * 1024), 2)
+                        for root, dirs, files in os.walk(item_path):
+                            for file in files:
+                                file_extension = Path(file).suffix.lower()
+                                if file_extension in video_extensions:
+                                    episode_count += 1
+                                    file_path = os.path.join(root, file)
+                                    total_size += os.path.getsize(file_path)
+                        
+                        if episode_count > 0:  # Seulement les dossiers avec des vidéos
+                            total_size_mb = round(total_size / (1024 * 1024), 2)
                             
-                            title = Path(file).stem
-                            
-                            local_series.append({
-                                "title": title,
-                                "filename": file,
-                                "path": file_path,
-                                "size_mb": file_size_mb,
-                                "extension": file_extension,
-                                "folder": os.path.relpath(root, series_folder),
-                                "source_folder": series_folder
+                            series_folders.append({
+                                "name": item,
+                                "path": item_path,
+                                "episode_count": episode_count,
+                                "total_size_mb": total_size_mb,
+                                "source_folder": base_folder
                             })
         
         return {
-            "series": local_series,
-            "total": len(local_series),
+            "series": series_folders,
+            "total": len(series_folders),
             "scanned_folders": scanned_folders
         }
     except Exception as e:
         return {"error": f"Erreur lors du scan: {str(e)}", "series": [], "scanned_folders": scanned_folders}
+
+
+@app.get("/series/local/{series_name}/episodes")
+def get_series_episodes(series_name: str):
+    possible_folders = [
+        "/home/rosh/Vidéos/Séries"
+    ]
+    
+    video_extensions = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'}
+    
+    # Décoder le nom de la série
+    series_name = unquote(series_name)
+    
+    try:
+        for base_folder in possible_folders:
+            series_path = os.path.join(base_folder, series_name)
+            if os.path.exists(series_path) and os.path.isdir(series_path):
+                episodes = []
+                
+                for root, dirs, files in os.walk(series_path):
+                    for file in files:
+                        file_extension = Path(file).suffix.lower()
+                        if file_extension in video_extensions:
+                            file_path = os.path.join(root, file)
+                            file_size = os.path.getsize(file_path)
+                            file_size_mb = round(file_size / (1024 * 1024), 2)
+                            
+                            # Déterminer la saison/dossier relatif
+                            relative_folder = os.path.relpath(root, series_path)
+                            if relative_folder == ".":
+                                relative_folder = "Racine"
+                            
+                            episodes.append({
+                                "title": Path(file).stem,
+                                "filename": file,
+                                "path": file_path,
+                                "size_mb": file_size_mb,
+                                "extension": file_extension,
+                                "season_folder": relative_folder,
+                                "series_name": series_name
+                            })
+                
+                # Trier les épisodes par nom de fichier
+                episodes.sort(key=lambda x: x["filename"])
+                
+                return {
+                    "series_name": series_name,
+                    "episodes": episodes,
+                    "total_episodes": len(episodes)
+                }
+        
+        return {"error": f"Série '{series_name}' non trouvée", "episodes": []}
+    
+    except Exception as e:
+        return {"error": f"Erreur lors de la récupération des épisodes: {str(e)}", "episodes": []}
 
 
 @app.get("/stream/{file_path:path}")

@@ -68,11 +68,52 @@
   margin-top: 40px;
 }
 
-.series-section h2 {
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.section-header h2 {
   font-size: 1.8rem;
-  margin-bottom: 20px;
+  margin: 0;
   color: #4ecdc4;
+}
+
+.hide-series-btn,
+.back-to-series-btn {
+  background: linear-gradient(45deg, #666, #888);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.hide-series-btn:hover,
+.back-to-series-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, #777, #999);
+}
+
+.episodes-section {
+  margin-top: 40px;
+}
+
+.loading-episodes {
   text-align: center;
+  padding: 60px 20px;
+  color: #b8b8b8;
+  font-style: italic;
+  font-size: 1.1rem;
 }
 
 .no-series {
@@ -150,5 +191,20 @@
   .access-series-btn {
     padding: 12px 25px;
     font-size: 1rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .hide-series-btn,
+  .back-to-series-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
   }
 }
