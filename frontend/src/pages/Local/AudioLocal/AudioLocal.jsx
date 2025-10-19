@@ -82,7 +82,7 @@ export default function AudioLocal() {
   if (loading) {
     return (
       <div className="audio-local-container">
-        <BackButton />
+        <BackButton path="/local" />
         <div className="loading">Chargement des fichiers audio...</div>
       </div>
     );
@@ -91,7 +91,7 @@ export default function AudioLocal() {
   if (error) {
     return (
       <div className="audio-local-container">
-        <BackButton />
+        <BackButton path="/local" />
         <div className="error">
           <h2>Erreur</h2>
           <p>{error}</p>

@@ -31,13 +31,11 @@ export default function FilmLocal() {
   };
 
   useEffect(() => {
-    // Optionnel : charger les films automatiquement au montage du composant
-    // fetchMovies();
   }, []);
 
   return (
     <div className="film-local-container">
-      <BackButton />
+      <BackButton path="/local" />
       <div className="film-local-content">
         <div className="hero-section">
           <h1>Films Locaux</h1>
