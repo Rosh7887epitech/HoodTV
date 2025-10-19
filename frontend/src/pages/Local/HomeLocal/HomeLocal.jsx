@@ -14,6 +14,7 @@ export default function HomeLocal() {
             <a href="/local-movies" className="category-item">📽️ Films</a>
             <a href="/local-series" className="category-item">📺 Séries</a>
             <a href="/local-photos" className="category-item">📸 Photos</a>
+            <a href="/local-audio" className="category-item">🎵 Musique</a>
         </div>
       </div>
     </div>

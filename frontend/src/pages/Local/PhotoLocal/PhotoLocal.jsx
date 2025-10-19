@@ -34,7 +34,6 @@ export default function PhotoLocal() {
   };
 
   const openPhoto = (photoPath) => {
-    // Ouvrir la photo dans un nouvel onglet ou dans un viewer
     const encodedPath = encodeURIComponent(photoPath);
     window.open(`http://127.0.0.1:8000/view-image/${encodedPath}`, '_blank');
   };
@@ -44,7 +43,7 @@ export default function PhotoLocal() {
 
   return (
     <div className="photo-local-container">
-      <BackButton />
+      <BackButton path="/local" />
       <div className="photo-local-content">
         <div className="hero-section">
           <h1>Photos Locales</h1>

@@ -444,6 +444,147 @@ def stream_video(file_path: str, request: Request):
         )
 
 
+@app.get("/audio/local")
+def get_local_audio():
+    possible_folders = [
+        "/home/rosh/Audio"
+    ]
+    
+    audio_extensions = {'.mp3', '.wav', '.flac', '.ogg', '.aac', '.m4a', '.wma', '.opus', '.aiff', '.au', '.ra'}
+    
+    local_audio = []
+    scanned_folders = []
+    
+    try:
+        for audio_folder in possible_folders:
+            if os.path.exists(audio_folder):
+                scanned_folders.append(audio_folder)
+                for root, dirs, files in os.walk(audio_folder):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        file_extension = Path(file).suffix.lower()
+                        
+                        if file_extension in audio_extensions:
+                            file_size = os.path.getsize(file_path)
+                            file_size_mb = round(file_size / (1024 * 1024), 2)
+                            
+                            title = Path(file).stem
+                            
+                            artist = "Artiste inconnu"
+                            album = "Album inconnu"
+                            
+                            relative_path = os.path.relpath(root, audio_folder)
+                            path_parts = relative_path.split(os.sep) if relative_path != "." else []
+                            
+                            if len(path_parts) >= 2:
+                                artist = path_parts[0]
+                                album = path_parts[1]
+                            elif len(path_parts) == 1:
+                                artist = path_parts[0]
+                            
+                            local_audio.append({
+                                "title": title,
+                                "artist": artist,
+                                "album": album,
+                                "filename": file,
+                                "path": file_path,
+                                "size_mb": file_size_mb,
+                                "extension": file_extension,
+                                "folder": os.path.relpath(root, audio_folder),
+                                "source_folder": audio_folder
+                            })
+        
+        return {
+            "audio": local_audio,
+            "total": len(local_audio),
+            "scanned_folders": scanned_folders
+        }
+    except Exception as e:
+        return {"error": f"Erreur lors du scan: {str(e)}", "audio": [], "scanned_folders": scanned_folders}
+
+
+@app.get("/stream-audio/{file_path:path}")
+def stream_audio(file_path: str, request: Request):
+    """
+    Streaming de fichiers audio avec support des range requests
+    """
+    file_path = unquote(file_path)
+    if not os.path.exists(file_path):
+        return {"error": "Fichier non trouvé"}
+    
+    file_extension = Path(file_path).suffix.lower()
+    audio_extensions = {'.mp3', '.wav', '.flac', '.ogg', '.aac', '.m4a', '.wma', '.opus', '.aiff', '.au', '.ra'}
+    
+    if file_extension not in audio_extensions:
+        return {"error": "Type de fichier non supporté"}
+    
+    content_type, _ = mimetypes.guess_type(file_path)
+    if content_type is None:
+        content_type_map = {
+            '.mp3': 'audio/mpeg',
+            '.wav': 'audio/wav',
+            '.flac': 'audio/flac',
+            '.ogg': 'audio/ogg',
+            '.aac': 'audio/aac',
+            '.m4a': 'audio/mp4',
+            '.wma': 'audio/x-ms-wma',
+            '.opus': 'audio/opus',
+            '.aiff': 'audio/aiff',
+            '.au': 'audio/basic',
+            '.ra': 'audio/x-pn-realaudio'
+        }
+        content_type = content_type_map.get(file_extension, 'audio/mpeg')
+    
+    file_size = os.path.getsize(file_path)
+    range_header = request.headers.get("range")
+    
+    if range_header:
+        byte_start = 0
+        byte_end = file_size - 1
+        
+        if range_header.startswith("bytes="):
+            range_value = range_header[6:]
+            if "-" in range_value:
+                start_str, end_str = range_value.split("-", 1)
+                if start_str:
+                    byte_start = int(start_str)
+                if end_str:
+                    byte_end = int(end_str)
+        
+        byte_start = max(0, byte_start)
+        byte_end = min(file_size - 1, byte_end)
+        content_length = byte_end - byte_start + 1
+        
+        def iterfile(file_path, start, end):
+            with open(file_path, "rb") as file:
+                file.seek(start)
+                remaining = end - start + 1
+                while remaining:
+                    chunk_size = min(8192, remaining)
+                    chunk = file.read(chunk_size)
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+                    yield chunk
+        
+        return StreamingResponse(
+            iterfile(file_path, byte_start, byte_end),
+            status_code=206,
+            headers={
+                "Content-Range": f"bytes {byte_start}-{byte_end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(content_length),
+                "Content-Type": content_type,
+            },
+        )
+    else:
+        return FileResponse(
+            file_path,
+            media_type=content_type,
+            headers={"Accept-Ranges": "bytes"}
+        )
+
+
 @app.get("/proxy/{url:path}")
 def proxy_stream(url: str, request: Request):
     """

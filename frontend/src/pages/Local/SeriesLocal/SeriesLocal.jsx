@@ -12,7 +12,7 @@ export default function SeriesLocal() {
   const [loading, setLoading] = useState(false);
   const [episodesLoading, setEpisodesLoading] = useState(false);
   const [showSeries, setShowSeries] = useState(false);
-  const [view, setView] = useState('series'); // 'series' ou 'episodes'
+  const [view, setView] = useState('series');
 
   const fetchSeries = async () => {
     try {
@@ -65,7 +65,7 @@ export default function SeriesLocal() {
 
   return (
     <div className="series-local-container">
-      <BackButton />
+      <BackButton path="/local" />
       <div className="series-local-content">
         <div className="hero-section">
           <h1>Séries Locales</h1>
