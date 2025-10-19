@@ -5,5 +5,6 @@ frontend/node_modules/
 # DB + env
 backend/app.db
 backend/.env
+backend/__pycache__/
 frontend/.env
 .DS_Store
