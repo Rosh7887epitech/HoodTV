@@ -1,5 +1,4 @@
 import "./Home.css";
-import Card from "../../components/Card/Card";
 
 export default function Home() {
   return (
@@ -7,19 +6,11 @@ export default function Home() {
       <div className="home-content">
         <div className="hero-section">
           <h1>Bienvenue sur HoodTV</h1>
-          <p className="hero-subtitle">Au sein du divertissement</p>
-        </div>
-        <div className="categories-section">
-            <Card 
-              title="Streaming" 
-              img="https://img.icons8.com/fluency/100/tv.png"
-              link="/streaming"
-            />
-            <Card 
-              title="Local" 
-              img="https://img.icons8.com/ios-filled/100/000000/folder-invoices--v1.png"
-              link="/local"
-            />
+          <p className="hero-subtitle">Votre centre de divertissement personnel</p>
+          <p className="hero-description">
+            Utilisez le menu latéral pour naviguer entre vos contenus streaming, 
+            locaux, IPTV et vos favoris.
+          </p>
         </div>
       </div>
     </div>

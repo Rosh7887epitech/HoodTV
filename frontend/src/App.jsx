@@ -8,22 +8,26 @@ import SeriesLocal from "./pages/Local/SeriesLocal/SeriesLocal";
 import PhotoLocal from "./pages/Local/PhotoLocal/PhotoLocal";
 import AudioLocal from "./pages/Local/AudioLocal/AudioLocal";
 import IPTVPage from "./pages/IPTV/IPTVPage";
+import Sidebar from "./components/Sidebar/Sidebar";
 
 function App() {
   return (
     <Router>
-      <div>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/streaming" element={<HomeIPTV />} />
-          <Route path="/local" element={<HomeLocal />} />
-          <Route path="/stars" element={<Favorite />} />
-          <Route path="/local-movies" element={<FilmLocal />} />
-          <Route path="/local-series" element={<SeriesLocal />} />
-          <Route path="/local-photos" element={<PhotoLocal />} />
-          <Route path="/local-audio" element={<AudioLocal />} />
-          <Route path="/iptv" element={<IPTVPage />} />
-        </Routes>
+      <div className="app-container">
+        <Sidebar />
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/streaming" element={<HomeIPTV />} />
+            <Route path="/local" element={<HomeLocal />} />
+            <Route path="/stars" element={<Favorite />} />
+            <Route path="/local-movies" element={<FilmLocal />} />
+            <Route path="/local-series" element={<SeriesLocal />} />
+            <Route path="/local-photos" element={<PhotoLocal />} />
+            <Route path="/local-audio" element={<AudioLocal />} />
+            <Route path="/iptv" element={<IPTVPage />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );
