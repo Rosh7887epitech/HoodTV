@@ -43,7 +43,6 @@ export default function PhotoLocal() {
 
   return (
     <div className="photo-local-container">
-      <BackButton path="/local" />
       <div className="photo-local-content">
         <div className="hero-section">
           <h1>Photos Locales</h1>

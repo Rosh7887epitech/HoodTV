@@ -35,7 +35,6 @@ export default function FilmLocal() {
 
   return (
     <div className="film-local-container">
-      <BackButton path="/local" />
       <div className="film-local-content">
         <div className="hero-section">
           <h1>Films Locaux</h1>

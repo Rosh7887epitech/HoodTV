@@ -65,7 +65,6 @@ export default function SeriesLocal() {
 
   return (
     <div className="series-local-container">
-      <BackButton path="/local" />
       <div className="series-local-content">
         <div className="hero-section">
           <h1>Séries Locales</h1>
