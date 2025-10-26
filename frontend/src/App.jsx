@@ -7,6 +7,7 @@ import FilmLocal from "./pages/Local/FilmLocal/FilmLocal";
 import SeriesLocal from "./pages/Local/SeriesLocal/SeriesLocal";
 import PhotoLocal from "./pages/Local/PhotoLocal/PhotoLocal";
 import AudioLocal from "./pages/Local/AudioLocal/AudioLocal";
+import IPTVPage from "./pages/IPTV/IPTVPage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/local-series" element={<SeriesLocal />} />
           <Route path="/local-photos" element={<PhotoLocal />} />
           <Route path="/local-audio" element={<AudioLocal />} />
+          <Route path="/iptv" element={<IPTVPage />} />
         </Routes>
       </div>
     </Router>
