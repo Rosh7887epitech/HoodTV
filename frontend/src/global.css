@@ -58,6 +58,10 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
+  
+  /* Layout */
+  --sidebar-width: 250px;
+  --sidebar-width-collapsed: 70px;
 }
 
 
@@ -70,6 +74,35 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Layout avec Sidebar */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left var(--transition);
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: var(--sidebar-width-collapsed);
+  }
 }
 
 body {
