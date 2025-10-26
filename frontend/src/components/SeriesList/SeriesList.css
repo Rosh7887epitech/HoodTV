@@ -1,21 +1,23 @@
 .series-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
-  padding: 20px 0;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg) 0;
 }
 
 .empty-series {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
   font-style: italic;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
 }
 
 @media (max-width: 768px) {
   .series-list {
     grid-template-columns: 1fr;
-    gap: 15px;
-    padding: 15px 0;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0;
   }
 }

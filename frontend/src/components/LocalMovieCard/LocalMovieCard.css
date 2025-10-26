@@ -1,21 +1,20 @@
 .local-movie-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  padding: 20px;
-  margin: 10px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-sm);
   max-width: 300px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition);
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: var(--spacing-md);
 }
 
 .local-movie-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-hover);
 }
 
 .movie-icon {
@@ -28,64 +27,65 @@
 }
 
 .movie-info h3 {
-  margin: 0 0 10px 0;
-  color: white;
-  font-size: 1.1rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
   word-break: break-word;
 }
 
 .movie-details {
   display: flex;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .file-extension {
-  background: #4ecdc4;
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-primary);
   padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
   font-weight: bold;
 }
 
 .file-size {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
   padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
 }
 
 .movie-folder {
-  font-size: 0.85rem;
-  color: #b8b8b8;
-  margin: 5px 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: var(--spacing-xs) 0;
   font-style: italic;
 }
 
 .play-button {
-  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-  color: white;
+  background: var(--accent-primary);
+  color: var(--text-primary);
   border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  transition: all 0.3s ease;
-  margin-top: 10px;
+  transition: all var(--transition);
+  margin-top: var(--spacing-sm);
 }
 
 .play-button:hover {
+  background: var(--accent-hover);
   transform: scale(1.05);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-red);
 }
 
 @media (max-width: 768px) {
   .local-movie-card {
     max-width: 100%;
-    margin: 10px 0;
+    margin: var(--spacing-sm) 0;
   }
   
   .movie-icon {

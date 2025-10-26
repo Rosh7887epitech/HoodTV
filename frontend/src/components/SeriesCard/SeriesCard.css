@@ -1,10 +1,10 @@
 .series-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 15px;
-  padding: 20px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
   min-height: 120px;
   display: flex;
   align-items: center;
@@ -12,14 +12,15 @@
 
 .series-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
+  background: var(--accent-primary);
 }
 
 .series-card-content {
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 15px;
+  gap: var(--spacing-md);
 }
 
 .series-icon {
@@ -29,31 +30,30 @@
 
 .series-info {
   flex: 1;
-  color: white;
+  color: var(--text-primary);
 }
 
 .series-title {
-  margin: 0 0 8px 0;
-  font-size: 1.3rem;
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-xl);
   font-weight: 600;
-  color: white;
 }
 
 .series-details {
-  margin: 0 0 4px 0;
-  opacity: 0.9;
-  font-size: 0.95rem;
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .series-size {
   margin: 0;
-  opacity: 0.7;
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 768px) {
   .series-card {
-    padding: 15px;
+    padding: var(--spacing-md);
     min-height: 100px;
   }
   
@@ -62,11 +62,11 @@
   }
   
   .series-title {
-    font-size: 1.1rem;
+    font-size: var(--font-size-lg);
   }
   
   .series-details,
   .series-size {
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
   }
 }
