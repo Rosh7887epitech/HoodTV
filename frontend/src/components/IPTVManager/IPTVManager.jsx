@@ -28,7 +28,6 @@ export default function IPTVManager() {
     }
   ];
 
-  // Parse un fichier M3U
   const parseM3U = async (content) => {
     const lines = content.split('\n');
     const parsed = [];
@@ -38,14 +37,13 @@ export default function IPTVManager() {
       const line = lines[i].trim();
 
       if (line.startsWith('#EXTINF:')) {
-        // Extraire les infos du channel
         const nameMatch = line.match(/,(.+)$/);
         const logoMatch = line.match(/tvg-logo="([^"]+)"/);
         const groupMatch = line.match(/group-title="([^"]+)"/);
 
         currentChannel = {
           name: nameMatch ? nameMatch[1] : 'Sans nom',
-          logo: logoMatch ? logoMatch[1] : '📡',
+          logo: logoMatch ? logoMatch[1] : '',
           category: groupMatch ? groupMatch[1] : 'Général',
           type: 'application/x-mpegURL'
         };
@@ -59,13 +57,11 @@ export default function IPTVManager() {
     return parsed;
   };
 
-  // Charger un fichier M3U depuis une URL
   const loadM3U = async () => {
     if (!m3uUrl) return;
 
     setLoading(true);
     try {
-      // Utiliser le proxy backend pour charger le M3U
       const proxiedUrl = `http://127.0.0.1:8000/proxy/${encodeURIComponent(m3uUrl)}`;
       const response = await fetch(proxiedUrl);
       const content = await response.text();
@@ -79,7 +75,6 @@ export default function IPTVManager() {
     }
   };
 
-  // Charger un fichier M3U local
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -97,20 +92,18 @@ export default function IPTVManager() {
     }
   };
 
-  // Filtrer les chaînes
   const filteredChannels = channels.filter(channel => {
     const matchesSearch = channel.name.toLowerCase().includes(filter.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || channel.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  // Obtenir les catégories uniques
   const categories = ['all', ...new Set(channels.map(c => c.category))];
 
   return (
     <div className="iptv-manager">
       <div className="iptv-controls">
-        <h2>📡 Gestionnaire IPTV</h2>
+        <h2>Gestionnaire IPTV</h2>
         
         <div className="m3u-input-section">
           <div className="url-input-group">
@@ -122,13 +115,13 @@ export default function IPTVManager() {
               className="m3u-url-input"
             />
             <button onClick={loadM3U} disabled={loading} className="load-btn">
-              {loading ? '⏳ Chargement...' : '📥 Charger'}
+              {loading ? 'Chargement...' : 'Charger'}
             </button>
           </div>
 
           <div className="file-input-group">
             <label htmlFor="m3u-file" className="file-label">
-              📂 Ou charger un fichier M3U local
+              Ou charger un fichier M3U local
             </label>
             <input
               id="m3u-file"
@@ -144,7 +137,7 @@ export default function IPTVManager() {
             onClick={() => setChannels(sampleChannels)} 
             className="sample-btn"
           >
-            🧪 Charger des exemples
+            Charger des exemples
           </button>
         </div>
 
@@ -152,7 +145,7 @@ export default function IPTVManager() {
           <div className="filters-section">
             <input
               type="text"
-              placeholder="🔍 Rechercher une chaîne..."
+              placeholder="Rechercher une chaîne..."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="search-input"
