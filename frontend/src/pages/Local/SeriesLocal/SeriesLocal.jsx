@@ -11,7 +11,6 @@ export default function SeriesLocal() {
   const [selectedSeries, setSelectedSeries] = useState(null);
   const [loading, setLoading] = useState(false);
   const [episodesLoading, setEpisodesLoading] = useState(false);
-  const [showSeries, setShowSeries] = useState(false);
   const [view, setView] = useState('series');
 
   const fetchSeries = async () => {
@@ -39,15 +38,6 @@ export default function SeriesLocal() {
     }
   };
 
-  const handleShowSeries = () => {
-    if (!showSeries) {
-      fetchSeries();
-    }
-    setShowSeries(!showSeries);
-    setView('series');
-    setSelectedSeries(null);
-  };
-
   const handleSeriesClick = (serie) => {
     setSelectedSeries(serie);
     setView('episodes');
@@ -61,62 +51,52 @@ export default function SeriesLocal() {
   };
 
   useEffect(() => {
+    fetchSeries();
   }, []);
 
   return (
     <div className="series-local-container">
-      <BackButton path="/local" />
       <div className="series-local-content">
         <div className="hero-section">
           <h1>Séries Locales</h1>
           <p className="hero-subtitle">Gérez votre collection de séries locales organisées par dossiers</p>
         </div>
-        
-        {!showSeries && (
-          <div className="actions-section">
-            <button 
-              className="access-series-btn"
-              onClick={handleShowSeries}
-              disabled={loading}
-            >
-              {loading ? 'Chargement...' : 'Accéder à mes séries locales'}
-            </button>
-          </div>
-        )}
 
-        {showSeries && view === 'series' && (
-          <div className="series-section">
-            <div className="section-header">
-              <h2>Mes séries ({series.length} série{series.length !== 1 ? 's' : ''})</h2>
-              <button 
-                className="hide-series-btn"
-                onClick={handleShowSeries}
-              >
-                Masquer les séries
-              </button>
-            </div>
-            <SeriesList series={series} onSeriesClick={handleSeriesClick} />
+        {loading ? (
+          <div className="loading-section">
+            <p>Chargement des séries...</p>
           </div>
-        )}
-
-        {showSeries && view === 'episodes' && selectedSeries && (
-          <div className="episodes-section">
-            <div className="section-header">
-              <button 
-                className="back-to-series-btn"
-                onClick={handleBackToSeries}
-              >
-                ← Retour aux séries
-              </button>
-            </div>
-            {episodesLoading ? (
-              <div className="loading-episodes">
-                <p>Chargement des épisodes...</p>
+        ) : (
+          <>
+            {view === 'series' && (
+              <div className="series-section">
+                <div className="section-header">
+                  <h2>Mes séries ({series.length} série{series.length !== 1 ? 's' : ''})</h2>
+                </div>
+                <SeriesList series={series} onSeriesClick={handleSeriesClick} />
               </div>
-            ) : (
-              <EpisodeList episodes={episodes} seriesName={selectedSeries.name} />
             )}
-          </div>
+
+            {view === 'episodes' && selectedSeries && (
+              <div className="episodes-section">
+                <div className="section-header">
+                  <button 
+                    className="back-to-series-btn"
+                    onClick={handleBackToSeries}
+                  >
+                    ← Retour aux séries
+                  </button>
+                </div>
+                {episodesLoading ? (
+                  <div className="loading-episodes">
+                    <p>Chargement des épisodes...</p>
+                  </div>
+                ) : (
+                  <EpisodeList episodes={episodes} seriesName={selectedSeries.name} />
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

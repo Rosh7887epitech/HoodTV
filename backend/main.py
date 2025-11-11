@@ -8,6 +8,9 @@ import os
 import mimetypes
 from pathlib import Path
 from urllib.parse import unquote
+from fastapi.responses import Response
+import httpx
+from typing import Optional
 
 app = FastAPI(title="HoodTV API")
 
@@ -586,12 +589,80 @@ def stream_audio(file_path: str, request: Request):
 
 
 @app.get("/proxy/{url:path}")
-def proxy_stream(url: str, request: Request):
+async def proxy_stream(url: str, request: Request):
     """
-    Proxy pour streaming de contenu distant (HLS, DASH, etc.)
-    Utile pour contourner les problèmes CORS
+    Proxy avancé pour streaming IPTV avec support CORS et headers
+    Supporte HLS (.m3u8), DASH (.mpd) et streams HTTP directs
     """
-    import requests
+    from urllib.parse import unquote
+    
+    # Décoder l'URL
+    url = unquote(url)
+    
+    # Validation de l'URL
+    if not url.startswith(('http://', 'https://')):
+        return {"error": "URL invalide - doit commencer par http:// ou https://"}
+    
+    try:
+        # Préparer les headers pour la requête proxy
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': '*/*',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+        }
+        
+        # Copier certains headers de la requête client si présents
+        if 'range' in request.headers:
+            headers['Range'] = request.headers['range']
+        
+        if 'referer' in request.headers:
+            headers['Referer'] = request.headers['referer']
+        
+        # Utiliser httpx pour des requêtes asynchrones performantes
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers=headers)
+            
+            # Préparer les headers de réponse
+            response_headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+            }
+            
+            # Copier les headers importants de la réponse upstream
+            important_headers = [
+                'content-type', 'content-length', 'content-range', 
+                'accept-ranges', 'last-modified', 'etag'
+            ]
+            
+            for header in important_headers:
+                if header in response.headers:
+                    response_headers[header] = response.headers[header]
+            
+            # Retourner la réponse avec les bons headers CORS
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=response_headers,
+                media_type=response.headers.get('content-type', 'application/octet-stream')
+            )
+            
+    except httpx.TimeoutException:
+        return {"error": "Timeout lors de la connexion au flux"}
+    except httpx.RequestError as e:
+        return {"error": f"Erreur de requête: {str(e)}"}
+    except Exception as e:
+        return {"error": f"Erreur de proxy: {str(e)}"}
+
+
+@app.get("/proxy/{url:path}")
+async def proxy_stream(url: str, request: Request):
+    """
+    Proxy IPTV avec gestion correcte du Content-Length
+    """
+    from urllib.parse import unquote
     
     url = unquote(url)
     
@@ -599,26 +670,77 @@ def proxy_stream(url: str, request: Request):
         return {"error": "URL invalide"}
     
     try:
-        headers = {}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': '*/*',
+            'Connection': 'keep-alive',
+        }
+        
+        # Copier le header Range si présent (pour le streaming)
         if 'range' in request.headers:
             headers['Range'] = request.headers['range']
         
-        response = requests.get(url, headers=headers, stream=True)
-        
-        response_headers = {}
-        for header in ['content-type', 'content-length', 'content-range', 'accept-ranges']:
-            if header in response.headers:
-                response_headers[header.replace('-', '_').title()] = response.headers[header]
-        
-        return StreamingResponse(
-            response.iter_content(chunk_size=8192),
-            status_code=response.status_code,
-            headers=response_headers
+        # Important : Ne PAS demander la compression pour éviter les problèmes de Content-Length
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url, headers=headers)
+            
+            # Headers de réponse CORS
+            response_headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Headers': '*',
+                'Cache-Control': 'no-cache',
+            }
+            
+            # Copier UNIQUEMENT les headers importants, SAUF content-length
+            # FastAPI recalculera automatiquement le bon Content-Length
+            headers_to_copy = ['content-type', 'content-range', 'accept-ranges', 'last-modified']
+            
+            for header in headers_to_copy:
+                if header in response.headers:
+                    response_headers[header] = response.headers[header]
+            
+            # Retourner la réponse
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=response_headers,
+                media_type=response.headers.get('content-type', 'application/octet-stream')
+            )
+            
+    except httpx.TimeoutException:
+        return Response(
+            content='{"error": "Timeout - le serveur ne répond pas"}',
+            status_code=504,
+            media_type="application/json"
         )
-        
+    except httpx.HTTPStatusError as e:
+        return Response(
+            content=f'{{"error": "Erreur HTTP {e.response.status_code}"}}',
+            status_code=e.response.status_code,
+            media_type="application/json"
+        )
     except Exception as e:
-        return {"error": f"Erreur de proxy: {str(e)}"}
+        print(f"Erreur proxy pour {url}: {str(e)}")  # Log pour debug
+        return Response(
+            content=f'{{"error": "Erreur de proxy: {str(e)}"}}',
+            status_code=500,
+            media_type="application/json"
+        )
 
+
+@app.options("/proxy/{url:path}")
+async def proxy_options(url: str):
+    """Gère les requêtes OPTIONS pour CORS preflight"""
+    return Response(
+        status_code=200,
+        headers={
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Max-Age': '3600',
+        }
+    )
 
 if __name__ == "__main__":
     import uvicorn

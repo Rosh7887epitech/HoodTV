@@ -6,7 +6,6 @@ import BackButton from "../../../components/BackButton/BackButton";
 export default function PhotoLocal() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showPhotos, setShowPhotos] = useState(false);
 
   const fetchPhotos = async () => {
     try {
@@ -18,13 +17,6 @@ export default function PhotoLocal() {
       console.error('Erreur lors de la récupération des photos locales:', error);
       setLoading(false);
     }
-  };
-
-  const handleShowPhotos = () => {
-    if (!showPhotos) {
-      fetchPhotos();
-    }
-    setShowPhotos(!showPhotos);
   };
 
   const formatFileSize = (sizeInBytes) => {
@@ -39,28 +31,22 @@ export default function PhotoLocal() {
   };
 
   useEffect(() => {
+    fetchPhotos();
   }, []);
 
   return (
     <div className="photo-local-container">
-      <BackButton path="/local" />
       <div className="photo-local-content">
         <div className="hero-section">
           <h1>Photos Locales</h1>
           <p className="hero-subtitle">Gérez votre collection de photos locales</p>
         </div>
-        
-        <div className="actions-section">
-          <button 
-            className="access-photos-btn"
-            onClick={handleShowPhotos}
-            disabled={loading}
-          >
-            {loading ? 'Chargement...' : showPhotos ? 'Masquer les photos' : 'Accéder à mes photos locales'}
-          </button>
-        </div>
 
-        {showPhotos && (
+        {loading ? (
+          <div className="loading-section">
+            <p>Chargement des photos...</p>
+          </div>
+        ) : (
           <div className="photos-section">
             <h2>Mes photos locales ({photos.length} photo{photos.length !== 1 ? 's' : ''})</h2>
             <div className="photos-grid">

@@ -9,7 +9,6 @@ import "../../../components/LocalMovieList/LocalMovieList.css";
 export default function FilmLocal() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showMovies, setShowMovies] = useState(false);
 
   const fetchMovies = async () => {
     try {
@@ -23,36 +22,23 @@ export default function FilmLocal() {
     }
   };
 
-  const handleShowMovies = () => {
-    if (!showMovies) {
-      fetchMovies();
-    }
-    setShowMovies(!showMovies);
-  };
-
   useEffect(() => {
+    fetchMovies();
   }, []);
 
   return (
     <div className="film-local-container">
-      <BackButton path="/local" />
       <div className="film-local-content">
         <div className="hero-section">
           <h1>Films Locaux</h1>
           <p className="hero-subtitle">Gérez votre collection de films locale</p>
         </div>
-        
-        <div className="actions-section">
-          <button 
-            className="access-movies-btn"
-            onClick={handleShowMovies}
-            disabled={loading}
-          >
-            {loading ? 'Chargement...' : showMovies ? 'Masquer les films' : 'Accéder à mes films locaux'}
-          </button>
-        </div>
 
-        {showMovies && (
+        {loading ? (
+          <div className="loading-section">
+            <p>Chargement des films...</p>
+          </div>
+        ) : (
           <div className="movies-section">
             <h2>Mes films locaux ({movies.length} film{movies.length !== 1 ? 's' : ''})</h2>
             <LocalMovieList movies={movies} />

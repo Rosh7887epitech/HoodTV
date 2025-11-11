@@ -3,15 +3,14 @@
   top: var(--spacing-xl);
   left: var(--spacing-xl);
   background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
+  border: none;
+  border-radius: var(--radius-lg);
   padding: var(--spacing-sm) var(--spacing-lg);
   color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all var(--transition);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -21,19 +20,13 @@
 }
 
 .back-button:hover {
-  background: var(--bg-hover);
+  background: var(--accent-primary);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--primary-color);
-}
-
-.back-button:active {
-  transform: translateY(0);
+  box-shadow: var(--shadow-red);
 }
 
 .back-button svg {
-  transition: transform var(--transition-normal);
-  color: var(--primary-color);
+  transition: transform var(--transition);
 }
 
 .back-button:hover svg {
@@ -45,6 +38,6 @@
     top: var(--spacing-md);
     left: var(--spacing-md);
     padding: var(--spacing-xs) var(--spacing-md);
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-sm);
   }
 }

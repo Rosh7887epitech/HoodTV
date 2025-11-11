@@ -1,24 +1,22 @@
-/* Styles spécifiques pour l'index - utilise les variables globales */
-
 .movie-card {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
   width: 200px;
   background-color: var(--bg-card);
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
+  transition: all var(--transition);
 }
 
 .movie-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
 .movie-poster {
   width: 100%;
   height: 300px;
   object-fit: cover;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
