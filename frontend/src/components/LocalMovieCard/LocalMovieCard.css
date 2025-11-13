@@ -102,6 +102,35 @@
   font-size: 1.2rem;
 }
 
+.delete-button-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(220, 38, 38, 0.9);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  opacity: 0;
+}
+
+.local-movie-card:hover .delete-button-overlay {
+  opacity: 1;
+}
+
+.delete-button-overlay:hover {
+  background: rgba(185, 28, 28, 1);
+  transform: scale(1.1);
+}
+
 .movie-card-info {
   padding: var(--spacing-md);
   flex: 1;

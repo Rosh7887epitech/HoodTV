@@ -2,7 +2,7 @@ import { useState } from 'react';
 import VideoPlayer from '../VideoPlayer/VideoPlayer';
 import './LocalMovieCard.css';
 
-export default function LocalMovieCard({ movie }) {
+export default function LocalMovieCard({ movie, onDelete }) {
   const [showPlayer, setShowPlayer] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -14,7 +14,11 @@ export default function LocalMovieCard({ movie }) {
   };
 
   const handlePlay = () => {
-    setShowPlayer(true);
+    // Si c'est un film local (avec path), ouvrir le player
+    if (movie.path) {
+      setShowPlayer(true);
+    }
+    // Sinon ne rien faire (pour les films favoris sans fichier local)
   };
 
   const handleClosePlayer = () => {
@@ -25,16 +29,25 @@ export default function LocalMovieCard({ movie }) {
     setImageError(true);
   };
 
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(movie.id);
+    }
+  };
+
+  // Support pour les films locaux ET les films favoris de la DB
   const displayTitle = movie.tmdb_title || movie.title;
-  const displayYear = movie.tmdb_year;
+  const displayYear = movie.tmdb_year || movie.year;
+  const posterUrl = movie.tmdb_poster || movie.poster_url;
 
   return (
     <>
       <div className="local-movie-card" onClick={handlePlay}>
         <div className="movie-poster-container">
-          {movie.tmdb_poster && !imageError ? (
+          {posterUrl && !imageError ? (
             <img 
-              src={movie.tmdb_poster} 
+              src={posterUrl} 
               alt={displayTitle}
               className="movie-poster"
               onError={handleImageError}
@@ -45,12 +58,19 @@ export default function LocalMovieCard({ movie }) {
               <span className="placeholder-text">Pas d'affiche</span>
             </div>
           )}
-          <div className="movie-overlay">
-            <button className="play-button-overlay">
-              <span className="play-icon"></span>
-              <span>Lire</span>
+          {movie.path && (
+            <div className="movie-overlay">
+              <button className="play-button-overlay">
+                <span className="play-icon">▶</span>
+                <span>Lire</span>
+              </button>
+            </div>
+          )}
+          {onDelete && (
+            <button className="delete-button-overlay" onClick={handleDelete}>
+              <span>✕</span>
             </button>
-          </div>
+          )}
         </div>
         
         <div className="movie-card-info">
@@ -60,14 +80,16 @@ export default function LocalMovieCard({ movie }) {
           {displayYear && (
             <p className="movie-year">{displayYear}</p>
           )}
-          <div className="movie-metadata">
-            <span className="file-extension">{movie.extension.replace('.', '').toUpperCase()}</span>
-            <span className="file-size">{formatSize(movie.size_mb)}</span>
-          </div>
+          {movie.extension && movie.size_mb && (
+            <div className="movie-metadata">
+              <span className="file-extension">{movie.extension.replace('.', '').toUpperCase()}</span>
+              <span className="file-size">{formatSize(movie.size_mb)}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {showPlayer && (
+      {showPlayer && movie.path && (
         <VideoPlayer 
           movie={movie} 
           onClose={handleClosePlayer}
