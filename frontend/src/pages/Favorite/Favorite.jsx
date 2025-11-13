@@ -13,6 +13,15 @@ export default function Favorite() {
     setMovies(res.data.movies);
   };
 
+  const handleDeleteMovie = async (movieId) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/movies/${movieId}`);
+      await fetchMovies();
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+    }
+  };
+
   useEffect(() => { fetchMovies(); }, []);
 
   return (
@@ -23,7 +32,7 @@ export default function Favorite() {
         </div>
         <div>
             <AddMovieForm refresh={fetchMovies} />
-            <MovieList movies={movies} refresh={fetchMovies} />
+            <MovieList movies={movies} onDelete={handleDeleteMovie} />
         </div>
       </div>
     </div>
