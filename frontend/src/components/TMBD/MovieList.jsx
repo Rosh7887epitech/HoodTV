@@ -1,10 +1,11 @@
-import MovieCard from "./MovieCard";
+import LocalMovieCard from "../LocalMovieCard/LocalMovieCard";
+import "./MovieList.css";
 
-export default function MovieList({ movies, refresh }) {
+export default function MovieList({ movies, onDelete }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "20px" }}>
+    <div className="movie-list-container">
       {movies.map(movie => (
-        <MovieCard key={movie.id} movie={movie} refresh={refresh} />
+        <LocalMovieCard key={movie.id} movie={movie} onDelete={onDelete} />
       ))}
     </div>
   );
