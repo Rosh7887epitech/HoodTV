@@ -29,11 +29,6 @@ export default function FilmLocal() {
   return (
     <div className="film-local-container">
       <div className="film-local-content">
-        <div className="hero-section">
-          <h1>Films Locaux</h1>
-          <p className="hero-subtitle">Gérez votre collection de films locale</p>
-        </div>
-
         {loading ? (
           <div className="loading-section">
             <p>Chargement des films...</p>

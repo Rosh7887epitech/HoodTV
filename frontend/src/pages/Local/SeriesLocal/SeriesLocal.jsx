@@ -57,11 +57,6 @@ export default function SeriesLocal() {
   return (
     <div className="series-local-container">
       <div className="series-local-content">
-        <div className="hero-section">
-          <h1>Séries Locales</h1>
-          <p className="hero-subtitle">Gérez votre collection de séries locales organisées par dossiers</p>
-        </div>
-
         {loading ? (
           <div className="loading-section">
             <p>Chargement des séries...</p>

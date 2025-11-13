@@ -37,10 +37,6 @@ export default function PhotoLocal() {
   return (
     <div className="photo-local-container">
       <div className="photo-local-content">
-        <div className="hero-section">
-          <h1>Photos Locales</h1>
-          <p className="hero-subtitle">Gérez votre collection de photos locales</p>
-        </div>
 
         {loading ? (
           <div className="loading-section">

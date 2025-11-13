@@ -103,12 +103,6 @@ export default function AudioLocal() {
 
   return (
     <div className="audio-local-container">
-      <div className="audio-local-header">
-        <h1>Musique Locale</h1>
-        <p className="audio-count">
-          {audioFiles.length} fichier{audioFiles.length > 1 ? 's' : ''} audio trouvé{audioFiles.length > 1 ? 's' : ''}
-        </p>
-      </div>
 
       <div className="audio-controls">
         <div className="search-container">
