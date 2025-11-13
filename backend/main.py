@@ -117,7 +117,7 @@ def search_movies(query: str = Query(..., min_length=1)):
 @app.get("/movies")
 def list_movies():
     conn = get_connection()
-    cursor = conn.execute("SELECT * FROM movies")
+    cursor = conn.execute("SELECT * FROM stars")
     movies = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return {"movies": movies}
@@ -127,7 +127,7 @@ def add_movie(movie: Movie):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO movies (title, year, poster_url) VALUES (?, ?, ?)",
+        "INSERT INTO stars (title, year, poster_url) VALUES (?, ?, ?)",
         (movie.title, movie.year, movie.poster_url)
     )
     conn.commit()
@@ -139,7 +139,7 @@ def add_movie(movie: Movie):
 def delete_movie(movie_id: int):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
+    cursor.execute("DELETE FROM stars WHERE id = ?", (movie_id,))
     conn.commit()
     conn.close()
     return {"message": f"Film {movie_id} supprimé"}
@@ -155,7 +155,7 @@ def add_movie_from_tmdb(movie_req: MovieRequest):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO movies (title, year, poster_url) VALUES (?, ?, ?)",
+        "INSERT INTO stars (title, year, poster_url) VALUES (?, ?, ?)",
         (movie["title"], movie["year"], movie["poster_url"])
     )
     conn.commit()
