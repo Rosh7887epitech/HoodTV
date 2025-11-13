@@ -1,8 +1,9 @@
 .local-movies-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, 200px);
   gap: var(--spacing-lg);
   margin-top: var(--spacing-lg);
+  justify-content: start;
 }
 
 .no-local-movies {
@@ -26,7 +27,15 @@
 
 @media (max-width: 768px) {
   .local-movies-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, 160px);
     gap: var(--spacing-md);
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .local-movies-grid {
+    grid-template-columns: repeat(auto-fill, 140px);
+    gap: var(--spacing-sm);
   }
 }
