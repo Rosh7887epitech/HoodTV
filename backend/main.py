@@ -2,7 +2,7 @@ from fastapi import FastAPI, Query, Request
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from database import get_connection
-from tmdb import search_movie
+from tmdb import search_movie, search_tv
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import mimetypes
@@ -11,6 +11,8 @@ from urllib.parse import unquote
 from fastapi.responses import Response
 import httpx
 from typing import Optional
+import re
+from difflib import SequenceMatcher
 
 app = FastAPI(title="HoodTV API")
 
@@ -28,6 +30,72 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def clean_title(title: str) -> str:
+    """Nettoie un titre de film ou série en retirant les patterns communs"""
+    clean = re.sub(r'\[.*?\]', '', title)
+    clean = re.sub(r'\(.*?\)', '', clean)
+    clean = re.sub(r'\b(19|20)\d{2}\b', '', clean)
+    clean = re.sub(r'\b(1080p|720p|2160p|4K|UHD|HDR|HDTV|WEB-DL|WEBRip|BluRay|BRRip|HDRip|DVDRip|PROPER|REPACK|EXTENDED|UNRATED|Directors\.Cut|DC)\b', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\b(x264|x265|h264|h265|HEVC|AAC|AC3|DTS|FLAC)\b', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'\b(YIFY|YTS|RARBG|SPARKS|DEFLATE|ROVERS|AMRAP|BLOW)\b', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'[._-]+', ' ', clean)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    return clean
+
+def normalize_string(s: str) -> str:
+    """Normalise une chaîne pour la comparaison"""
+    s = s.lower()
+    s = s.replace('é', 'e').replace('è', 'e').replace('ê', 'e').replace('ë', 'e')
+    s = s.replace('à', 'a').replace('â', 'a').replace('ä', 'a')
+    s = s.replace('ô', 'o').replace('ö', 'o')
+    s = s.replace('û', 'u').replace('ü', 'u').replace('ù', 'u')
+    s = s.replace('î', 'i').replace('ï', 'i')
+    s = s.replace('ç', 'c')
+    s = re.sub(r'[^a-z0-9\s]', '', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+def calculate_similarity(str1: str, str2: str) -> float:
+    """Calcule la similarité entre deux chaînes (0-1)"""
+    norm1 = normalize_string(str1)
+    norm2 = normalize_string(str2)
+    
+    if norm1 == norm2:
+        return 1.0
+    
+    if norm1 in norm2 or norm2 in norm1:
+        return 0.95
+    
+    return SequenceMatcher(None, norm1, norm2).ratio()
+
+def find_best_match(clean_title: str, tmdb_results: list, title_key: str = "title") -> dict:
+    """Trouve le meilleur match parmi les résultats TMDB"""
+    if not tmdb_results:
+        return None
+    
+    best_match = None
+    best_score = 0
+    
+    for result in tmdb_results:
+        title = result.get(title_key, "")
+        score = calculate_similarity(clean_title, title)
+        
+        original_key = "original_title" if title_key == "title" else "original_name"
+        original_title = result.get(original_key, "")
+        if original_title:
+            original_score = calculate_similarity(clean_title, original_title)
+            score = max(score, original_score)
+        
+        if score > best_score:
+            best_score = score
+            best_match = result
+    
+    if best_score < 0.6 and tmdb_results:
+        sorted_results = sorted(tmdb_results, key=lambda x: x.get('popularity', 0), reverse=True)
+        return sorted_results[0]
+    
+    return best_match
 
 class Movie(BaseModel):
     title: str
@@ -96,7 +164,7 @@ def add_movie_from_tmdb(movie_req: MovieRequest):
     return {"id": movie_id, "movie": movie}
 
 @app.get("/movies/local")
-def get_local_movies():
+def get_local_movies(enrich_tmdb: bool = Query(default=True)):
     possible_folders = [
         "/home/rosh/Vidéos/Films"
     ]
@@ -123,15 +191,37 @@ def get_local_movies():
                             # Nom sans extension pour le titre
                             title = Path(file).stem
                             
-                            local_movies.append({
+                            movie_data = {
                                 "title": title,
                                 "filename": file,
                                 "path": file_path,
                                 "size_mb": file_size_mb,
                                 "extension": file_extension,
                                 "folder": os.path.relpath(root, movies_folder),
-                                "source_folder": movies_folder
-                            })
+                                "source_folder": movies_folder,
+                                "tmdb_title": None,
+                                "tmdb_poster": None,
+                                "tmdb_year": None
+                            }
+                            
+                            # Enrichir avec les données TMDB si demandé
+                            if enrich_tmdb:
+                                try:
+                                    # Nettoyer le titre
+                                    clean_movie_title = clean_title(title)
+                                    
+                                    # Rechercher sur TMDB
+                                    tmdb_results = search_movie(clean_movie_title)
+                                    if tmdb_results:
+                                        best_match = find_best_match(clean_movie_title, tmdb_results, "title")
+                                        if best_match:
+                                            movie_data["tmdb_title"] = best_match.get("title")
+                                            movie_data["tmdb_poster"] = best_match.get("poster_url")
+                                            movie_data["tmdb_year"] = best_match.get("year")
+                                except Exception as tmdb_error:
+                                    print(f"Erreur TMDB pour {title}: {str(tmdb_error)}")
+                            
+                            local_movies.append(movie_data)
         
         return {
             "movies": local_movies,
@@ -239,34 +329,28 @@ def get_thumbnail(file_path: str):
         if file_extension not in image_extensions:
             return {"error": "Type de fichier non supporté"}
         
-        # Créer un dossier temporaire pour les miniatures si nécessaire
         thumbnails_dir = "/tmp/hoodtv_thumbnails"
         os.makedirs(thumbnails_dir, exist_ok=True)
         
-        # Nom du fichier miniature basé sur le hash du chemin original
         import hashlib
         thumbnail_name = hashlib.md5(file_path.encode()).hexdigest() + "_thumb.jpg"
         thumbnail_path = os.path.join(thumbnails_dir, thumbnail_name)
         
-        # Générer la miniature si elle n'existe pas
         if not os.path.exists(thumbnail_path):
             with Image.open(file_path) as img:
-                # Convertir en RGB si nécessaire (pour les PNG avec transparence)
                 if img.mode in ('RGBA', 'LA', 'P'):
                     img = img.convert('RGB')
                 
-                # Redimensionner en gardant les proportions
                 img.thumbnail((200, 200), Image.Resampling.LANCZOS)
                 img.save(thumbnail_path, "JPEG", quality=85)
         
         return FileResponse(
             thumbnail_path,
             media_type="image/jpeg",
-            headers={"Cache-Control": "max-age=86400"}  # Cache pendant 24h
+            headers={"Cache-Control": "max-age=86400"}
         )
         
     except ImportError:
-        # Si PIL n'est pas disponible, retourner l'image originale
         return FileResponse(
             file_path,
             media_type="image/jpeg",
@@ -277,7 +361,7 @@ def get_thumbnail(file_path: str):
 
 
 @app.get("/series/local")
-def get_local_series():
+def get_local_series(enrich_tmdb: bool = Query(default=True)):
     possible_folders = [
         "/home/rosh/Vidéos/Séries"
     ]
@@ -292,11 +376,9 @@ def get_local_series():
             if os.path.exists(base_folder):
                 scanned_folders.append(base_folder)
                 
-                # Récupérer les dossiers de séries (niveau 1)
                 for item in os.listdir(base_folder):
                     item_path = os.path.join(base_folder, item)
                     if os.path.isdir(item_path):
-                        # Compter les épisodes dans ce dossier
                         episode_count = 0
                         total_size = 0
                         
@@ -308,16 +390,42 @@ def get_local_series():
                                     file_path = os.path.join(root, file)
                                     total_size += os.path.getsize(file_path)
                         
-                        if episode_count > 0:  # Seulement les dossiers avec des vidéos
+                        if episode_count > 0:
                             total_size_mb = round(total_size / (1024 * 1024), 2)
                             
-                            series_folders.append({
+                            series_data = {
                                 "name": item,
                                 "path": item_path,
                                 "episode_count": episode_count,
                                 "total_size_mb": total_size_mb,
-                                "source_folder": base_folder
-                            })
+                                "source_folder": base_folder,
+                                "tmdb_name": None,
+                                "tmdb_poster": None,
+                                "tmdb_backdrop": None,
+                                "tmdb_year": None,
+                                "tmdb_overview": None,
+                                "tmdb_rating": None
+                            }
+                            if enrich_tmdb:
+                                try:
+                                    clean_series_name = clean_title(item)
+                                    clean_series_name = re.sub(r'\b(Season|S\d+|saison|complete|integral|integrale)\b', '', clean_series_name, flags=re.IGNORECASE)
+                                    clean_series_name = clean_series_name.strip()
+                                    
+                                    tmdb_results = search_tv(clean_series_name)
+                                    if tmdb_results:
+                                        best_match = find_best_match(clean_series_name, tmdb_results, "name")
+                                        if best_match:
+                                            series_data["tmdb_name"] = best_match.get("name")
+                                            series_data["tmdb_poster"] = best_match.get("poster_url")
+                                            series_data["tmdb_backdrop"] = best_match.get("backdrop_url")
+                                            series_data["tmdb_year"] = best_match.get("year")
+                                            series_data["tmdb_overview"] = best_match.get("overview")
+                                            series_data["tmdb_rating"] = best_match.get("vote_average")
+                                except Exception as tmdb_error:
+                                    print(f"Erreur TMDB pour {item}: {str(tmdb_error)}")
+                            
+                            series_folders.append(series_data)
         
         return {
             "series": series_folders,
@@ -336,7 +444,6 @@ def get_series_episodes(series_name: str):
     
     video_extensions = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'}
     
-    # Décoder le nom de la série
     series_name = unquote(series_name)
     
     try:
@@ -353,7 +460,6 @@ def get_series_episodes(series_name: str):
                             file_size = os.path.getsize(file_path)
                             file_size_mb = round(file_size / (1024 * 1024), 2)
                             
-                            # Déterminer la saison/dossier relatif
                             relative_folder = os.path.relpath(root, series_path)
                             if relative_folder == ".":
                                 relative_folder = "Racine"
@@ -368,7 +474,6 @@ def get_series_episodes(series_name: str):
                                 "series_name": series_name
                             })
                 
-                # Trier les épisodes par nom de fichier
                 episodes.sort(key=lambda x: x["filename"])
                 
                 return {
@@ -591,75 +696,6 @@ def stream_audio(file_path: str, request: Request):
 @app.get("/proxy/{url:path}")
 async def proxy_stream(url: str, request: Request):
     """
-    Proxy avancé pour streaming IPTV avec support CORS et headers
-    Supporte HLS (.m3u8), DASH (.mpd) et streams HTTP directs
-    """
-    from urllib.parse import unquote
-    
-    # Décoder l'URL
-    url = unquote(url)
-    
-    # Validation de l'URL
-    if not url.startswith(('http://', 'https://')):
-        return {"error": "URL invalide - doit commencer par http:// ou https://"}
-    
-    try:
-        # Préparer les headers pour la requête proxy
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': '*/*',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-        }
-        
-        # Copier certains headers de la requête client si présents
-        if 'range' in request.headers:
-            headers['Range'] = request.headers['range']
-        
-        if 'referer' in request.headers:
-            headers['Referer'] = request.headers['referer']
-        
-        # Utiliser httpx pour des requêtes asynchrones performantes
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.get(url, headers=headers)
-            
-            # Préparer les headers de réponse
-            response_headers = {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': '*',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-            }
-            
-            # Copier les headers importants de la réponse upstream
-            important_headers = [
-                'content-type', 'content-length', 'content-range', 
-                'accept-ranges', 'last-modified', 'etag'
-            ]
-            
-            for header in important_headers:
-                if header in response.headers:
-                    response_headers[header] = response.headers[header]
-            
-            # Retourner la réponse avec les bons headers CORS
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers=response_headers,
-                media_type=response.headers.get('content-type', 'application/octet-stream')
-            )
-            
-    except httpx.TimeoutException:
-        return {"error": "Timeout lors de la connexion au flux"}
-    except httpx.RequestError as e:
-        return {"error": f"Erreur de requête: {str(e)}"}
-    except Exception as e:
-        return {"error": f"Erreur de proxy: {str(e)}"}
-
-
-@app.get("/proxy/{url:path}")
-async def proxy_stream(url: str, request: Request):
-    """
     Proxy IPTV avec gestion correcte du Content-Length
     """
     from urllib.parse import unquote
@@ -676,15 +712,12 @@ async def proxy_stream(url: str, request: Request):
             'Connection': 'keep-alive',
         }
         
-        # Copier le header Range si présent (pour le streaming)
         if 'range' in request.headers:
             headers['Range'] = request.headers['range']
         
-        # Important : Ne PAS demander la compression pour éviter les problèmes de Content-Length
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(url, headers=headers)
             
-            # Headers de réponse CORS
             response_headers = {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -692,15 +725,12 @@ async def proxy_stream(url: str, request: Request):
                 'Cache-Control': 'no-cache',
             }
             
-            # Copier UNIQUEMENT les headers importants, SAUF content-length
-            # FastAPI recalculera automatiquement le bon Content-Length
             headers_to_copy = ['content-type', 'content-range', 'accept-ranges', 'last-modified']
             
             for header in headers_to_copy:
                 if header in response.headers:
                     response_headers[header] = response.headers[header]
             
-            # Retourner la réponse
             return Response(
                 content=response.content,
                 status_code=response.status_code,
