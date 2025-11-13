@@ -1,8 +1,9 @@
 .series-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, 200px);
   gap: var(--spacing-lg);
   padding: var(--spacing-lg) 0;
+  justify-content: start;
 }
 
 .empty-series {
@@ -12,12 +13,21 @@
   font-style: italic;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 768px) {
   .series-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, 160px);
     gap: var(--spacing-md);
     padding: var(--spacing-md) 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .series-list {
+    grid-template-columns: repeat(auto-fill, 140px);
+    gap: var(--spacing-sm);
   }
 }
