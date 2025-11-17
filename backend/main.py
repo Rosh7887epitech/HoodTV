@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, HTTPException, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from database import get_connection
 from tmdb import search_movie, search_tv
 from fastapi.middleware.cors import CORSMiddleware
+from auth import hash_password, verify_password, create_access_token, verify_token, authenticate_user, create_user, get_user_by_name
+from datetime import timedelta
+from typing import Optional
 import os
 import mimetypes
 from pathlib import Path
@@ -105,9 +108,172 @@ class Movie(BaseModel):
 class MovieRequest(BaseModel):
     title: str
 
+class UserRegister(BaseModel):
+    name: str
+    password: Optional[str] = None
+    age: Optional[int] = None
+
+class UserLogin(BaseModel):
+    name: str
+    password: Optional[str] = None
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    has_password: Optional[bool] = None
+    age: Optional[int] = None
+
+def get_current_user(authorization: str = Header(None)):
+    """Récupère l'utilisateur connecté à partir du token"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != 'bearer':
+            raise HTTPException(status_code=401, detail="Schéma d'authentification invalide")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Format d'authentification invalide")
+    
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Token invalide")
+    
+    user = get_user_by_name(payload.get("sub"))
+    if not user:
+        raise HTTPException(status_code=401, detail="Utilisateur non trouvé")
+    
+    return user
+
 @app.get("/")
 def root():
     return {"status": "ok"}
+
+@app.post("/auth/register")
+def register(user_data: UserRegister):
+    """Inscription d'un nouvel utilisateur"""
+    user_id = create_user(user_data.name, user_data.password, user_data.age)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Un utilisateur avec ce nom existe déjà")
+    
+    # Créer un token pour l'utilisateur
+    access_token = create_access_token(data={"sub": user_data.name})
+    
+    return {
+        "message": "Utilisateur créé avec succès",
+        "user_id": user_id,
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
+@app.post("/auth/login")
+def login(user_data: UserLogin):
+    """Connexion d'un utilisateur"""
+    user = authenticate_user(user_data.name, user_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Nom d'utilisateur ou mot de passe incorrect")
+    
+    access_token = create_access_token(data={"sub": user['name']})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user['id'],
+            "name": user['name'],
+            "age": user['age']
+        }
+    }
+
+@app.get("/auth/me")
+def get_me(authorization: str = Header(None)):
+    """Récupère les informations de l'utilisateur connecté"""
+    user = get_current_user(authorization)
+    return {
+        "id": user['id'],
+        "name": user['name'],
+        "age": user['age'],
+        "profile_photo": user.get('profile_photo'),
+        "has_password": user.get('has_password', 0)
+    }
+
+@app.get("/users")
+def get_all_users():
+    """Récupère la liste de tous les utilisateurs"""
+    conn = get_connection()
+    cursor = conn.execute("SELECT id, name, age, profile_photo, has_password FROM user")
+    users = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return {"users": users}
+
+
+@app.put("/users/{user_id}")
+def update_user(user_id: int, user_data: UserUpdate):
+    """Met à jour un utilisateur (name, password, age, has_password)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    params = []
+
+    if user_data.name is not None:
+        updates.append("name = ?")
+        params.append(user_data.name)
+
+    if user_data.age is not None:
+        updates.append("age = ?")
+        params.append(user_data.age)
+
+    # Password handling
+    if user_data.password is not None:
+        # Set hashed password and has_password flag
+        hashed = hash_password(user_data.password)
+        updates.append("password = ?")
+        params.append(hashed)
+        updates.append("has_password = ?")
+        params.append(1)
+    elif user_data.has_password is not None and user_data.has_password is False:
+        # Remove password protection
+        updates.append("password = ?")
+        params.append(None)
+        updates.append("has_password = ?")
+        params.append(0)
+
+    if not updates:
+        conn.close()
+        return {"message": "Rien à mettre à jour"}
+
+    try:
+        sql = f"UPDATE user SET {', '.join(updates)} WHERE id = ?"
+        params.append(user_id)
+        cursor.execute(sql, tuple(params))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    cursor = conn.execute("SELECT id, name, age, profile_photo, has_password FROM user WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    return {"user": dict(user)}
+
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int):
+    """Supprime un utilisateur"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM user WHERE id = ?", (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    cursor.execute("DELETE FROM user WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"message": f"Utilisateur {user_id} supprimé"}
 
 @app.get("/movies/search")
 def search_movies(query: str = Query(..., min_length=1)):
@@ -696,9 +862,9 @@ def stream_audio(file_path: str, request: Request):
 @app.get("/proxy/{url:path}")
 async def proxy_stream(url: str, request: Request):
     """
-    Proxy IPTV avec gestion correcte du Content-Length
+    Proxy IPTV avec gestion des URLs relatives dans les playlists M3U8
     """
-    from urllib.parse import unquote
+    from urllib.parse import unquote, urljoin, quote
     
     url = unquote(url)
     
@@ -731,8 +897,64 @@ async def proxy_stream(url: str, request: Request):
                 if header in response.headers:
                     response_headers[header] = response.headers[header]
             
+            content = response.content
+            
+            # Si c'est un fichier M3U8, on doit transformer les URLs relatives
+            content_type = response.headers.get('content-type', '')
+            is_m3u8 = (
+                'mpegurl' in content_type.lower() or
+                'x-mpegURL' in content_type or
+                url.endswith('.m3u8') or
+                url.endswith('.m3u')
+            )
+            
+            if is_m3u8:
+                try:
+                    # Décoder le contenu M3U8
+                    playlist_content = content.decode('utf-8')
+                    lines = playlist_content.split('\n')
+                    modified_lines = []
+                    
+                    # URL de base pour résoudre les URLs relatives
+                    base_url = url.rsplit('/', 1)[0] + '/'
+                    
+                    for line in lines:
+                        stripped_line = line.strip()
+                        
+                        # Si la ligne n'est pas un commentaire et n'est pas vide
+                        if stripped_line and not stripped_line.startswith('#'):
+                            # Si c'est une URL relative (ne commence pas par http)
+                            if not stripped_line.startswith(('http://', 'https://')):
+                                # Construire l'URL absolue
+                                absolute_url = urljoin(base_url, stripped_line)
+                                # Re-proxifier l'URL
+                                proxified_url = f"http://127.0.0.1:8000/proxy/{quote(absolute_url, safe='')}"
+                                modified_lines.append(proxified_url)
+                            else:
+                                # C'est déjà une URL absolue, on la proxifie
+                                proxified_url = f"http://127.0.0.1:8000/proxy/{quote(stripped_line, safe='')}"
+                                modified_lines.append(proxified_url)
+                        else:
+                            # C'est un commentaire ou une ligne vide, on garde tel quel
+                            modified_lines.append(line)
+                    
+                    # Reconstruire le contenu
+                    modified_content = '\n'.join(modified_lines)
+                    content = modified_content.encode('utf-8')
+                    
+                    # Mettre à jour Content-Length
+                    response_headers['Content-Length'] = str(len(content))
+                    
+                    print(f"✓ M3U8 transformé: {url}")
+                    print(f"  Base URL: {base_url}")
+                    
+                except Exception as parse_error:
+                    print(f"⚠ Erreur parsing M3U8 pour {url}: {parse_error}")
+                    # En cas d'erreur, on retourne le contenu original
+                    pass
+            
             return Response(
-                content=response.content,
+                content=content,
                 status_code=response.status_code,
                 headers=response_headers,
                 media_type=response.headers.get('content-type', 'application/octet-stream')

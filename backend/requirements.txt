@@ -4,3 +4,5 @@ requests
 python-dotenv
 Pillow
 httpx
+bcrypt
+python-jose[cryptography]
