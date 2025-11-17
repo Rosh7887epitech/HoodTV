@@ -5,15 +5,15 @@ export default function Sidebar() {
   const location = useLocation();
 
   const isActive = (path) => {
-    if (path === "/" && location.pathname === "/") return true;
-    if (path !== "/" && location.pathname.startsWith(path)) return true;
+    if (path === "/home" && location.pathname === "/home") return true;
+    if (path !== "/home" && location.pathname.startsWith(path)) return true;
     return false;
   };
 
   const menuItems = [
     {
       name: "Accueil",
-      path: "/",
+      path: "/home",
       icon: "",
       exact: true
     },
