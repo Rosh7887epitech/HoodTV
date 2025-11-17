@@ -3,7 +3,6 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000';
 
 const authService = {
-  // Inscription
   register: async (name, password = null, age = null) => {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, {
@@ -23,7 +22,6 @@ const authService = {
     }
   },
 
-  // Connexion
   login: async (name, password = null) => {
     try {
       const response = await axios.post(`${API_URL}/auth/login`, {
@@ -42,7 +40,6 @@ const authService = {
     }
   },
 
-  // Récupérer tous les utilisateurs
   getAllUsers: async () => {
     try {
       const response = await axios.get(`${API_URL}/users`);
@@ -52,7 +49,6 @@ const authService = {
     }
   },
 
-  // Mettre à jour un utilisateur
   updateUser: async (id, data) => {
     try {
       const token = authService.getToken();
@@ -65,7 +61,6 @@ const authService = {
     }
   },
 
-  // Supprimer un utilisateur
   deleteUser: async (id) => {
     try {
       const token = authService.getToken();
@@ -78,29 +73,24 @@ const authService = {
     }
   },
 
-  // Déconnexion
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
 
-  // Récupérer le token
   getToken: () => {
     return localStorage.getItem('token');
   },
 
-  // Vérifier si l'utilisateur est connecté
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
   },
 
-  // Récupérer l'utilisateur connecté
   getCurrentUser: () => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
 
-  // Vérifier le token avec le backend
   verifyToken: async () => {
     try {
       const token = authService.getToken();

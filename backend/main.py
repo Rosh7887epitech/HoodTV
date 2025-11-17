@@ -156,7 +156,6 @@ def register(user_data: UserRegister):
     if not user_id:
         raise HTTPException(status_code=400, detail="Un utilisateur avec ce nom existe déjà")
     
-    # Créer un token pour l'utilisateur
     access_token = create_access_token(data={"sub": user_data.name})
     
     return {
@@ -224,16 +223,13 @@ def update_user(user_id: int, user_data: UserUpdate):
         updates.append("age = ?")
         params.append(user_data.age)
 
-    # Password handling
     if user_data.password is not None:
-        # Set hashed password and has_password flag
         hashed = hash_password(user_data.password)
         updates.append("password = ?")
         params.append(hashed)
         updates.append("has_password = ?")
         params.append(1)
     elif user_data.has_password is not None and user_data.has_password is False:
-        # Remove password protection
         updates.append("password = ?")
         params.append(None)
         updates.append("has_password = ?")
@@ -350,11 +346,9 @@ def get_local_movies(enrich_tmdb: bool = Query(default=True)):
                         file_extension = Path(file).suffix.lower()
                         
                         if file_extension in video_extensions:
-                            # Obtenir les informations du fichier
                             file_size = os.path.getsize(file_path)
                             file_size_mb = round(file_size / (1024 * 1024), 2)
                             
-                            # Nom sans extension pour le titre
                             title = Path(file).stem
                             
                             movie_data = {
@@ -370,13 +364,10 @@ def get_local_movies(enrich_tmdb: bool = Query(default=True)):
                                 "tmdb_year": None
                             }
                             
-                            # Enrichir avec les données TMDB si demandé
                             if enrich_tmdb:
                                 try:
-                                    # Nettoyer le titre
                                     clean_movie_title = clean_title(title)
                                     
-                                    # Rechercher sur TMDB
                                     tmdb_results = search_movie(clean_movie_title)
                                     if tmdb_results:
                                         best_match = find_best_match(clean_movie_title, tmdb_results, "title")
@@ -899,7 +890,6 @@ async def proxy_stream(url: str, request: Request):
             
             content = response.content
             
-            # Si c'est un fichier M3U8, on doit transformer les URLs relatives
             content_type = response.headers.get('content-type', '')
             is_m3u8 = (
                 'mpegurl' in content_type.lower() or
@@ -910,39 +900,29 @@ async def proxy_stream(url: str, request: Request):
             
             if is_m3u8:
                 try:
-                    # Décoder le contenu M3U8
                     playlist_content = content.decode('utf-8')
                     lines = playlist_content.split('\n')
                     modified_lines = []
                     
-                    # URL de base pour résoudre les URLs relatives
                     base_url = url.rsplit('/', 1)[0] + '/'
                     
                     for line in lines:
                         stripped_line = line.strip()
                         
-                        # Si la ligne n'est pas un commentaire et n'est pas vide
                         if stripped_line and not stripped_line.startswith('#'):
-                            # Si c'est une URL relative (ne commence pas par http)
                             if not stripped_line.startswith(('http://', 'https://')):
-                                # Construire l'URL absolue
                                 absolute_url = urljoin(base_url, stripped_line)
-                                # Re-proxifier l'URL
                                 proxified_url = f"http://127.0.0.1:8000/proxy/{quote(absolute_url, safe='')}"
                                 modified_lines.append(proxified_url)
                             else:
-                                # C'est déjà une URL absolue, on la proxifie
                                 proxified_url = f"http://127.0.0.1:8000/proxy/{quote(stripped_line, safe='')}"
                                 modified_lines.append(proxified_url)
                         else:
-                            # C'est un commentaire ou une ligne vide, on garde tel quel
                             modified_lines.append(line)
                     
-                    # Reconstruire le contenu
                     modified_content = '\n'.join(modified_lines)
                     content = modified_content.encode('utf-8')
                     
-                    # Mettre à jour Content-Length
                     response_headers['Content-Length'] = str(len(content))
                     
                     print(f"✓ M3U8 transformé: {url}")
@@ -950,7 +930,6 @@ async def proxy_stream(url: str, request: Request):
                     
                 except Exception as parse_error:
                     print(f"⚠ Erreur parsing M3U8 pour {url}: {parse_error}")
-                    # En cas d'erreur, on retourne le contenu original
                     pass
             
             return Response(
@@ -973,7 +952,7 @@ async def proxy_stream(url: str, request: Request):
             media_type="application/json"
         )
     except Exception as e:
-        print(f"Erreur proxy pour {url}: {str(e)}")  # Log pour debug
+        print(f"Erreur proxy pour {url}: {str(e)}")
         return Response(
             content=f'{{"error": "Erreur de proxy: {str(e)}"}}',
             status_code=500,

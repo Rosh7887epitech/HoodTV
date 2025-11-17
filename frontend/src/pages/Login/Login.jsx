@@ -8,7 +8,6 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est déjà connecté
     const checkAuth = async () => {
       const authenticated = await authService.verifyToken();
       if (authenticated) {

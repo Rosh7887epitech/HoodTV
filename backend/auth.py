@@ -4,10 +4,9 @@ from jose import JWTError, jwt
 from typing import Optional
 from database import get_connection
 
-# Configuration JWT
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 43200  # 30 jours
+ACCESS_TOKEN_EXPIRE_MINUTES = 43200
 
 def hash_password(password: str) -> str:
     """Hash un mot de passe avec bcrypt"""
@@ -51,7 +50,6 @@ def create_user(name: str, password: str = None, age: int = None):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Vérifier si l'utilisateur existe déjà
     existing = get_user_by_name(name)
     if existing:
         conn.close()
@@ -75,11 +73,9 @@ def authenticate_user(name: str, password: str = None):
     if not user:
         return None
     
-    # Si l'utilisateur n'a pas de mot de passe, on le laisse passer
     if not user.get('has_password') or user.get('password') is None:
         return user
     
-    # Si l'utilisateur a un mot de passe, on le vérifie
     if not password or not verify_password(password, user['password']):
         return None
     

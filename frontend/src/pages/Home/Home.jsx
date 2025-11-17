@@ -54,12 +54,10 @@ export default function Home() {
       if (changePassword) {
         payload.password = newPassword;
       } else if (changePassword === false) {
-        // if user explicitly unsets password protection
         payload.has_password = false;
       }
 
       const updated = await authService.updateUser(currentUser.id, payload);
-      // Update local storage and state
       const updatedUser = { ...currentUser, ...updated };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
@@ -152,18 +150,12 @@ export default function Home() {
   );
 }
 
-// Render modal inside the same file
-// (placed here to avoid adding new component file)
-// Add ManageModal render
 export function ManageModalWrapper(props) {
   return null;
 }
 
-// Inject modal into default export render by using a small side-effect: we'll render it via JSX here
-// (To keep edits minimal we append a fragment export that components can import if needed.)
 
 
-// Modal JSX placed at end of file via React portal alternative (inline)
 export function ManageModal({ visible, user, editName, setEditName, changePassword, setChangePassword, newPassword, setNewPassword, onClose, onUpdate, onDelete, loading, error }) {
   if (!visible) return null;
   return (

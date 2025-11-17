@@ -53,7 +53,6 @@ export default function CreateUser() {
       
       await authService.register(formData.name, password, age);
       
-      // Rediriger vers la sélection d'utilisateur
       navigate('/select-user');
     } catch (err) {
       setError(err);

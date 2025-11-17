@@ -16,7 +16,6 @@ import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 function AppContent() {
   const location = useLocation();
   
-  // Pages sans sidebar
   const noSidebarRoutes = ['/select-user', '/create-user'];
   const showSidebar = !noSidebarRoutes.includes(location.pathname);
 
