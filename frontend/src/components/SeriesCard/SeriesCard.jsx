@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import "./SeriesCard.css";
+import FavoriteButton from '../FavoriteButton/FavoriteButton';
 
 export default function SeriesCard({ series, onClick }) {
   const [imageError, setImageError] = useState(false);
@@ -19,6 +20,17 @@ export default function SeriesCard({ series, onClick }) {
     return `${sizeMB} MB`;
   };
 
+  const favoriteMetadata = {
+    poster_url: series.tmdb_poster,
+    backdrop_url: series.tmdb_backdrop,
+    year: series.tmdb_year,
+    episode_count: series.episode_count,
+    total_size_mb: series.total_size_mb,
+    path: series.path,
+    overview: series.tmdb_overview,
+    rating: series.tmdb_rating
+  };
+
   return (
     <div className="series-card" onClick={() => onClick(series)}>
       <div className="series-poster-container">
@@ -35,6 +47,13 @@ export default function SeriesCard({ series, onClick }) {
             <span className="placeholder-text">Pas d'affiche</span>
           </div>
         )}
+        <div className="series-favorite-btn">
+          <FavoriteButton
+            contentType="series_local"
+            title={displayName}
+            metadata={favoriteMetadata}
+          />
+        </div>
         <div className="series-overlay">
           <button className="view-button-overlay">
             <span className="view-icon">👁️</span>
