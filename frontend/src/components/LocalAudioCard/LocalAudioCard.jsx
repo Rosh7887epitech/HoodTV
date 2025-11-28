@@ -1,3 +1,4 @@
+import FavoriteButton from '../FavoriteButton/FavoriteButton';
 import './LocalAudioCard.css';
 
 export default function LocalAudioCard({ audio, onPlay }) {
@@ -8,6 +9,14 @@ export default function LocalAudioCard({ audio, onPlay }) {
     return `${sizeMb.toFixed(1)} MB`;
   };
 
+  const favoriteMetadata = {
+    artist: audio.artist,
+    album: audio.album,
+    size_mb: audio.size_mb,
+    extension: audio.extension,
+    path: audio.path
+  };
+
   return (
     <div className="local-audio-card">
       <div className="audio-card-header">
@@ -16,6 +25,13 @@ export default function LocalAudioCard({ audio, onPlay }) {
         </div>
         <div className="audio-format">
           {audio.extension.toUpperCase().slice(1)}
+        </div>
+        <div className="audio-favorite-btn">
+          <FavoriteButton
+            contentType="audio_local"
+            title={audio.title}
+            metadata={favoriteMetadata}
+          />
         </div>
       </div>
       
