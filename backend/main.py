@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Query, Request, HTTPException, Header
+from fastapi import FastAPI, Query, Request, HTTPException, Header, Depends
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
-from database import get_connection
+from database import get_connection, reorganize_ids
 from tmdb import search_movie, search_tv
 from fastapi.middleware.cors import CORSMiddleware
 from auth import hash_password, verify_password, create_access_token, verify_token, authenticate_user, create_user, get_user_by_name
@@ -16,6 +16,7 @@ import httpx
 from typing import Optional
 import re
 from difflib import SequenceMatcher
+import json
 
 app = FastAPI(title="HoodTV API")
 
@@ -122,6 +123,11 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     has_password: Optional[bool] = None
     age: Optional[int] = None
+
+class FavoriteItem(BaseModel):
+    content_type: str  # "movie_tmdb", "series_local", "audio_local", etc.
+    title: str
+    metadata: Optional[dict] = None  # Contient les données spécifiques (poster_url, path, etc.)
 
 def get_current_user(authorization: str = Header(None)):
     """Récupère l'utilisateur connecté à partir du token"""
@@ -271,6 +277,93 @@ def delete_user(user_id: int):
     conn.close()
     return {"message": f"Utilisateur {user_id} supprimé"}
 
+# ==================== ENDPOINTS FAVORIS ====================
+
+@app.get("/users/{user_id}/favorites")
+def get_user_favorites(user_id: int, authorization: str = Header(None)):
+    """Récupère tous les favoris d'un utilisateur"""
+    user = get_current_user(authorization)
+    
+    # Vérifier que l'utilisateur accède à ses propres favoris
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
+    conn = get_connection()
+    cursor = conn.execute(
+        "SELECT id, content_type, title, metadata, created_at FROM favorites WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,)
+    )
+    favorites = []
+    for row in cursor.fetchall():
+        fav = dict(row)
+        if fav['metadata']:
+            fav['metadata'] = json.loads(fav['metadata'])
+        favorites.append(fav)
+    conn.close()
+    
+    return {"favorites": favorites}
+
+@app.post("/users/{user_id}/favorites")
+def add_to_favorites(user_id: int, favorite: FavoriteItem, authorization: str = Header(None)):
+    """Ajoute un élément aux favoris d'un utilisateur"""
+    user = get_current_user(authorization)
+    
+    # Vérifier que l'utilisateur ajoute à ses propres favoris
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Vérifier si l'élément existe déjà dans les favoris
+    metadata_json = json.dumps(favorite.metadata) if favorite.metadata else None
+    cursor.execute(
+        "SELECT id FROM favorites WHERE user_id = ? AND content_type = ? AND title = ?",
+        (user_id, favorite.content_type, favorite.title)
+    )
+    existing = cursor.fetchone()
+    
+    if existing:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Cet élément est déjà dans vos favoris")
+    
+    cursor.execute(
+        "INSERT INTO favorites (user_id, content_type, title, metadata) VALUES (?, ?, ?, ?)",
+        (user_id, favorite.content_type, favorite.title, metadata_json)
+    )
+    conn.commit()
+    favorite_id = cursor.lastrowid
+    conn.close()
+    
+    return {"id": favorite_id, "message": f"'{favorite.title}' ajouté aux favoris"}
+
+@app.delete("/users/{user_id}/favorites/{favorite_id}")
+def remove_from_favorites(user_id: int, favorite_id: int, authorization: str = Header(None)):
+    """Retire un élément des favoris d'un utilisateur"""
+    user = get_current_user(authorization)
+    
+    # Vérifier que l'utilisateur supprime de ses propres favoris
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Vérifier que le favori appartient à cet utilisateur
+    cursor.execute("SELECT id FROM favorites WHERE id = ? AND user_id = ?", (favorite_id, user_id))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Favori non trouvé")
+    
+    cursor.execute("DELETE FROM favorites WHERE id = ?", (favorite_id,))
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Favori supprimé"}
+
+# ==================== FIN ENDPOINTS FAVORIS ====================
+
+
 @app.get("/movies/search")
 def search_movies(query: str = Query(..., min_length=1)):
     results = search_movie(query)
@@ -304,7 +397,27 @@ def delete_movie(movie_id: int):
     cursor.execute("DELETE FROM stars WHERE id = ?", (movie_id,))
     conn.commit()
     conn.close()
+    
+    # Réorganiser les IDs pour qu'ils restent consécutifs
+    reorganize_ids("stars")
+    
     return {"message": f"Film {movie_id} supprimé"}
+
+@app.post("/movies/reorganize-ids")
+def reorganize_movies_ids():
+    """Endpoint pour réorganiser manuellement les IDs des favoris"""
+    try:
+        reorganize_ids("stars")
+        conn = get_connection()
+        cursor = conn.execute("SELECT COUNT(*) as count FROM stars")
+        count = cursor.fetchone()['count']
+        conn.close()
+        return {
+            "message": "IDs réorganisés avec succès",
+            "total_movies": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la réorganisation: {str(e)}")
 
 @app.post("/movies/add_tmdb")
 def add_movie_from_tmdb(movie_req: MovieRequest):

@@ -7,6 +7,70 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def reset_autoincrement(table_name):
+    """Réinitialise le compteur AUTOINCREMENT d'une table"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Obtenir le max ID actuel
+        cursor.execute(f"SELECT MAX(id) FROM {table_name}")
+        max_id = cursor.fetchone()[0]
+        if max_id is None:
+            max_id = 0
+        
+        # Mettre à jour la séquence sqlite
+        cursor.execute(f"UPDATE sqlite_sequence SET seq = ? WHERE name = ?", (max_id, table_name))
+        conn.commit()
+    except Exception as e:
+        print(f"Erreur lors du reset autoincrement: {e}")
+    finally:
+        conn.close()
+
+def reorganize_ids(table_name):
+    """Réorganise les IDs d'une table pour qu'ils soient consécutifs (1, 2, 3...)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Récupérer toutes les données
+        cursor.execute(f"SELECT * FROM {table_name} ORDER BY id")
+        rows = cursor.fetchall()
+        
+        if not rows:
+            return
+        
+        # Créer une table temporaire
+        cursor.execute(f"CREATE TEMPORARY TABLE temp_{table_name} AS SELECT * FROM {table_name}")
+        
+        # Vider la table originale
+        cursor.execute(f"DELETE FROM {table_name}")
+        
+        # Réinsérer avec de nouveaux IDs consécutifs
+        for new_id, row in enumerate(rows, start=1):
+            row_dict = dict(row)
+            columns = list(row_dict.keys())
+            columns.remove('id')
+            
+            placeholders = ', '.join(['?'] * (len(columns) + 1))
+            columns_str = 'id, ' + ', '.join(columns)
+            values = [new_id] + [row_dict[col] for col in columns]
+            
+            cursor.execute(f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders})", values)
+        
+        # Supprimer la table temporaire
+        cursor.execute(f"DROP TABLE temp_{table_name}")
+        
+        # Réinitialiser le compteur AUTOINCREMENT
+        cursor.execute(f"DELETE FROM sqlite_sequence WHERE name = ?", (table_name,))
+        cursor.execute(f"INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)", (table_name, len(rows)))
+        
+        conn.commit()
+        print(f"✓ IDs réorganisés pour {table_name}: {len(rows)} entrées")
+    except Exception as e:
+        conn.rollback()
+        print(f"Erreur lors de la réorganisation des IDs: {e}")
+    finally:
+        conn.close()
+
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -96,6 +160,23 @@ def init_db():
             has_password INTEGER DEFAULT 0
         )
         """)
+    
+    # Créer la table favorites pour les playlists personnelles
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        content_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        metadata TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+    )
+    """)
+    
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)
+    """)
     
     conn.commit()
     conn.close()
