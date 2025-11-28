@@ -9,9 +9,6 @@ export default function IPTVPage() {
       <div className="iptv-page-content">
         <div className="iptv-hero">
           <h1>IPTV Streaming</h1>
-          <p className="iptv-subtitle">
-            Regardez vos chaînes préférées en direct
-          </p>
         </div>
         <IPTVManager />
       </div>

@@ -1,0 +1,50 @@
+.iptv-page-container {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: var(--spacing-xl);
+}
+
+.iptv-page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.iptv-hero {
+  text-align: center;
+  padding: var(--spacing-2xl) 0;
+  margin-bottom: var(--spacing-xl);
+}
+
+.iptv-hero h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-lg);
+  text-shadow: 0 2px 10px rgba(239, 35, 60, 0.3);
+}
+
+.iptv-subtitle {
+  font-size: var(--font-size-xl);
+  color: var(--accent-primary);
+  margin: 0 0 var(--spacing-lg) 0;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .iptv-page-container {
+    padding: var(--spacing-md);
+  }
+  
+  .iptv-hero {
+    padding: var(--spacing-xl) 0;
+  }
+  
+  .iptv-hero h1 {
+    font-size: var(--font-size-2xl);
+  }
+  
+  .iptv-subtitle {
+    font-size: var(--font-size-lg);
+  }
+}

@@ -10,24 +10,6 @@ export default function IPTVManager() {
   const [filter, setFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Exemples de chaînes IPTV (tu peux les remplacer par tes vraies URLs)
-  const sampleChannels = [
-    {
-      name: 'Chaîne Exemple 1',
-      url: 'https://example.com/stream1.m3u8',
-      logo: '📺',
-      category: 'Sport',
-      type: 'application/x-mpegURL'
-    },
-    {
-      name: 'Chaîne Exemple 2',
-      url: 'https://example.com/stream2.m3u8',
-      logo: '🎬',
-      category: 'Films',
-      type: 'application/x-mpegURL'
-    }
-  ];
-
   const parseM3U = async (content) => {
     const lines = content.split('\n');
     const parsed = [];
@@ -103,8 +85,6 @@ export default function IPTVManager() {
   return (
     <div className="iptv-manager">
       <div className="iptv-controls">
-        <h2>Gestionnaire IPTV</h2>
-        
         <div className="m3u-input-section">
           <div className="url-input-group">
             <input
@@ -131,14 +111,6 @@ export default function IPTVManager() {
               className="file-input"
             />
           </div>
-
-          {/* Bouton pour tester avec des chaînes d'exemple */}
-          <button 
-            onClick={() => setChannels(sampleChannels)} 
-            className="sample-btn"
-          >
-            Charger des exemples
-          </button>
         </div>
 
         {channels.length > 0 && (
