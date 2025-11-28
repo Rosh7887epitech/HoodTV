@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import VideoPlayer from '../VideoPlayer/VideoPlayer';
+import FavoriteButton from '../FavoriteButton/FavoriteButton';
 import './LocalMovieCard.css';
 
 export default function LocalMovieCard({ movie, onDelete }) {
@@ -41,6 +42,14 @@ export default function LocalMovieCard({ movie, onDelete }) {
   const displayYear = movie.tmdb_year || movie.year;
   const posterUrl = movie.tmdb_poster || movie.poster_url;
 
+  const favoriteMetadata = {
+    poster_url: posterUrl,
+    year: displayYear,
+    size_mb: movie.size_mb,
+    extension: movie.extension,
+    path: movie.path
+  };
+
   return (
     <>
       <div className="local-movie-card" onClick={handlePlay}>
@@ -58,6 +67,13 @@ export default function LocalMovieCard({ movie, onDelete }) {
               <span className="placeholder-text">Pas d'affiche</span>
             </div>
           )}
+          <div className="movie-favorite-btn">
+            <FavoriteButton
+              contentType="movie_local"
+              title={displayTitle}
+              metadata={favoriteMetadata}
+            />
+          </div>
           {movie.path && (
             <div className="movie-overlay">
               <button className="play-button-overlay">
