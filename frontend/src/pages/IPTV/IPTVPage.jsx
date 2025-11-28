@@ -6,8 +6,6 @@ import './IPTVPage.css';
 export default function IPTVPage() {
   return (
     <div className="iptv-page-container">
-      <BackButton path="/streaming" />
-      
       <div className="iptv-page-content">
         <div className="iptv-hero">
           <h1>IPTV Streaming</h1>
