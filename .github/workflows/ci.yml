@@ -72,7 +72,7 @@ jobs:
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ vars.EPITECH_REPO_SSH_KEY }}
+          ssh-private-key: ${{ secrets.EPITECH_REPO_SSH_KEY }}
       
       - name: Add Epitech repo to known hosts
         run: |
