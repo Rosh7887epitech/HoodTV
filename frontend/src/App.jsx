@@ -12,6 +12,13 @@ import AudioLocal from "./pages/Local/AudioLocal/AudioLocal";
 import IPTVPage from "./pages/IPTV/IPTVPage";
 import Sidebar from "./components/Sidebar/Sidebar";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+// Xtream Codes Pages
+import XtreamHome from "./pages/Xtream/XtreamHome/XtreamHome";
+import AddXtreamAccount from "./pages/Xtream/AddXtreamAccount/AddXtreamAccount";
+import LiveChannels from "./pages/Xtream/LiveChannels/LiveChannels";
+import Movies from "./pages/Xtream/Movies/Movies";
+import Series from "./pages/Xtream/Series/Series";
+import SeriesDetails from "./pages/Xtream/SeriesDetails/SeriesDetails";
 
 function AppContent() {
   const location = useLocation();
@@ -96,6 +103,54 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <IPTVPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream" 
+            element={
+              <ProtectedRoute>
+                <XtreamHome />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream/add-account" 
+            element={
+              <ProtectedRoute>
+                <AddXtreamAccount />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream/live" 
+            element={
+              <ProtectedRoute>
+                <LiveChannels />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream/movies" 
+            element={
+              <ProtectedRoute>
+                <Movies />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream/series" 
+            element={
+              <ProtectedRoute>
+                <Series />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/xtream/series/:seriesId" 
+            element={
+              <ProtectedRoute>
+                <SeriesDetails />
               </ProtectedRoute>
             } 
           />
