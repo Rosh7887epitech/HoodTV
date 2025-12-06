@@ -11,7 +11,17 @@ export default function VideoPlayer({ movie, onClose }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const streamUrl = `http://127.0.0.1:8000/stream/${encodeURIComponent(movie.path)}`;
+  // Déterminer l'URL du stream
+  // Si movie.direct est true (Xtream), utiliser l'URL directe
+  // Sinon, utiliser le proxy backend pour les fichiers locaux
+  const streamUrl = movie.direct 
+    ? movie.path 
+    : `http://127.0.0.1:8000/stream/${encodeURIComponent(movie.path)}`;
+
+  // Déterminer le type de média
+  const mediaType = movie.direct && movie.path.includes('.m3u8') 
+    ? 'application/x-mpegURL' 
+    : 'video/mp4';
 
   useEffect(() => {
     if (playerRef.current) {
@@ -19,22 +29,29 @@ export default function VideoPlayer({ movie, onClose }) {
     }
 
     const videoJsOptions = {
-      autoplay: false,
+      autoplay: true,
       controls: true,
       responsive: true,
       fluid: true,
       playbackRates: [0.5, 1, 1.25, 1.5, 2],
       sources: [{
         src: streamUrl,
-        type: 'video/mp4'
+        type: mediaType
       }],
       html5: {
         hlsjsConfig: {
           debug: false,
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90
         },
         vhs: {
           withCredentials: false,
-        }
+          overrideNative: true,
+          smoothQualityChange: true
+        },
+        nativeAudioTracks: false,
+        nativeVideoTracks: false
       },
       className: 'vjs-theme-city',
       plugins: {
