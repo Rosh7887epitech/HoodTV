@@ -20,7 +20,12 @@ export default function Sidebar() {
     {
       name: "Streaming",
       path: "/streaming",
-      icon: ""
+      icon: "",
+      subItems: [
+        { name: "Local IPTV", path: "/iptv", icon: ""},
+        { name: "Xtream IPTV", path: "/xtream", icon: "" },
+
+      ]
     },
     {
       name: "Local",
@@ -32,11 +37,6 @@ export default function Sidebar() {
         { name: "Photos", path: "/local-photos", icon: "" },
         { name: "Musique", path: "/local-audio", icon: "" }
       ]
-    },
-    {
-      name: "IPTV",
-      path: "/iptv",
-      icon: ""
     },
     {
       name: "Favoris",
