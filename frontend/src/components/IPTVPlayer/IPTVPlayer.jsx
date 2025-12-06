@@ -11,9 +11,10 @@ export default function IPTVPlayer({ channel, onClose }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Utiliser le proxy backend pour contourner CORS
-  const getProxiedUrl = (originalUrl) => {
-    // Encode l'URL IPTV pour la passer au proxy
+  const getStreamUrl = (originalUrl, isDirect) => {
+    if (isDirect) {
+      return originalUrl;
+    }
     return `http://127.0.0.1:8000/proxy/${encodeURIComponent(originalUrl)}`;
   };
 
@@ -22,23 +23,23 @@ export default function IPTVPlayer({ channel, onClose }) {
       return;
     }
 
-    const proxiedUrl = getProxiedUrl(channel.url);
+    const streamUrl = getStreamUrl(channel.url, channel.direct);
 
     const videoJsOptions = {
       autoplay: true,
       controls: true,
       responsive: true,
       fluid: true,
-      liveui: true, // Active l'interface pour le streaming live
+      liveui: true,
       sources: [{
-        src: proxiedUrl,
-        type: channel.type || 'application/x-mpegURL' // HLS par défaut
+        src: streamUrl,
+        type: channel.type || 'application/x-mpegURL'
       }],
       html5: {
         hlsjsConfig: {
           debug: false,
           enableWorker: true,
-          lowLatencyMode: true, // Pour réduire la latence
+          lowLatencyMode: true,
           backBufferLength: 90
         },
         vhs: {
@@ -150,7 +151,6 @@ export default function IPTVPlayer({ channel, onClose }) {
       <div className="iptv-player-container">
         <div className="iptv-header">
           <div className="channel-info">
-            <span className="channel-logo">{channel.logo || '📡'}</span>
             <div className="channel-details">
               <h2>{channel.name}</h2>
               {channel.category && (
@@ -160,9 +160,6 @@ export default function IPTVPlayer({ channel, onClose }) {
           </div>
           <div className="header-right">
             <span className="live-badge">🔴 LIVE</span>
-            <span className="keyboard-hint" title="Raccourcis: Espace (play/pause), F (plein écran), Échap (fermer)">
-              ⌨️
-            </span>
             <button className="close-button" onClick={onClose}>
               ✕
             </button>
@@ -181,7 +178,7 @@ export default function IPTVPlayer({ channel, onClose }) {
           {error && (
             <div className="error-overlay">
               <div className="error-message">
-                <h3>❌ Erreur de connexion</h3>
+                <h3>Erreur de connexion</h3>
                 <p>{error}</p>
                 <div className="error-actions">
                   <button 
@@ -194,7 +191,7 @@ export default function IPTVPlayer({ channel, onClose }) {
                     }} 
                     className="retry-btn"
                   >
-                    🔄 Réessayer
+                    Réessayer
                   </button>
                   <button onClick={onClose} className="error-close-btn">
                     Fermer
