@@ -9,7 +9,6 @@ export default function SeriesCard({ series, onClick }) {
     setImageError(true);
   };
 
-  // Utiliser le nom TMDB si disponible, sinon le nom du dossier
   const displayName = series.tmdb_name || series.name;
   const displayYear = series.tmdb_year;
 

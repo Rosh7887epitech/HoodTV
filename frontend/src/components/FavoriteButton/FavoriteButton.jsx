@@ -38,7 +38,6 @@ export default function FavoriteButton({ contentType, title, metadata, onToggle 
 
     try {
       if (isFavorite) {
-        // Trouver l'ID du favori et le supprimer
         const favorites = await favoritesService.getFavorites(currentUser.id);
         const favorite = favorites.find(
           fav => fav.content_type === contentType && fav.title === title
@@ -50,7 +49,6 @@ export default function FavoriteButton({ contentType, title, metadata, onToggle 
           if (onToggle) onToggle(false);
         }
       } else {
-        // Ajouter aux favoris
         await favoritesService.addToFavorites(currentUser.id, {
           content_type: contentType,
           title: title,

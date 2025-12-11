@@ -10,7 +10,6 @@ export default function EpisodeList({ episodes, seriesName }) {
     );
   }
 
-  // Grouper les épisodes par saison/dossier
   const episodesBySeason = episodes.reduce((acc, episode) => {
     const season = episode.season_folder;
     if (!acc[season]) {

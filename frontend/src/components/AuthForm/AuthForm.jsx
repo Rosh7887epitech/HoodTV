@@ -25,7 +25,6 @@ export default function AuthForm({ onSuccess }) {
     setError('');
     setLoading(true);
 
-    // Validation
     if (!formData.name || !formData.password) {
       setError('Veuillez remplir tous les champs obligatoires');
       setLoading(false);

@@ -11,14 +11,10 @@ export default function VideoPlayer({ movie, onClose }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Déterminer l'URL du stream
-  // Si movie.direct est true (Xtream), utiliser l'URL directe
-  // Sinon, utiliser le proxy backend pour les fichiers locaux
   const streamUrl = movie.direct 
     ? movie.path 
     : `http://127.0.0.1:8000/stream/${encodeURIComponent(movie.path)}`;
 
-  // Déterminer le type de média
   const mediaType = movie.direct && movie.path.includes('.m3u8') 
     ? 'application/x-mpegURL' 
     : 'video/mp4';

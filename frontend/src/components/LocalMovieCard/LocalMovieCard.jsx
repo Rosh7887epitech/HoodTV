@@ -15,11 +15,9 @@ export default function LocalMovieCard({ movie, onDelete }) {
   };
 
   const handlePlay = () => {
-    // Si c'est un film local (avec path), ouvrir le player
     if (movie.path) {
       setShowPlayer(true);
     }
-    // Sinon ne rien faire (pour les films favoris sans fichier local)
   };
 
   const handleClosePlayer = () => {
@@ -37,7 +35,6 @@ export default function LocalMovieCard({ movie, onDelete }) {
     }
   };
 
-  // Support pour les films locaux ET les films favoris de la DB
   const displayTitle = movie.tmdb_title || movie.title;
   const displayYear = movie.tmdb_year || movie.year;
   const posterUrl = movie.tmdb_poster || movie.poster_url;
