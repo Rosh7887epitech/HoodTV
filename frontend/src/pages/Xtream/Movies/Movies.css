@@ -287,30 +287,6 @@
   box-shadow: var(--shadow-lg);
 }
 
-.player-close-btn {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
-  z-index: 10001;
-  width: 40px;
-  height: 40px;
-  background-color: rgba(0, 0, 0, 0.7);
-  border: 2px solid var(--accent-primary);
-  border-radius: 50%;
-  color: white;
-  font-size: var(--font-size-xl);
-  cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-close-btn:hover {
-  background-color: var(--accent-primary);
-  transform: rotate(90deg);
-}
-
 /* Movie Details Panel */
 .movie-details-panel {
   padding: var(--spacing-xl);

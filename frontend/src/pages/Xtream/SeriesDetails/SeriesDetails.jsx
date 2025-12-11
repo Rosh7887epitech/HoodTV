@@ -261,9 +261,6 @@ export default function SeriesDetails() {
         <div className="player-modal">
           <div className="player-modal-overlay" onClick={handleClosePlayer}></div>
           <div className="player-modal-content">
-            <button className="player-close-btn" onClick={handleClosePlayer}>
-              ✕
-            </button>
             <VideoPlayer
               movie={currentEpisode}
               onClose={handleClosePlayer}

@@ -75,7 +75,6 @@ export default function XtreamHome() {
       <div className="xtream-header">
         <div>
           <h1 className="xtream-title">Xtream Codes</h1>
-          <p className="xtream-subtitle">Accédez à vos contenus IPTV</p>
         </div>
         
         <button
