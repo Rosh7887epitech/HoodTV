@@ -5,17 +5,29 @@ import '@videojs/themes/dist/city/index.css';
 import 'videojs-hotkeys';
 import './IPTVPlayer.css';
 
-export default function IPTVPlayer({ channel, onClose }) {
+export default function IPTVPlayer({ channel, movie, onClose }) {
   const videoRef = useRef(null);
   const playerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const mediaData = channel || movie;
+  const mediaName = mediaData?.name || mediaData?.title || 'Lecture en cours';
+  const mediaUrl = mediaData?.url || mediaData?.path;
+  const isDirect = mediaData?.direct ?? false;
+  const isLive = !!channel;
+  
+  const mediaType = mediaData?.type || 
+    (isDirect && mediaUrl?.includes('.m3u8') ? 'application/x-mpegURL' : 'video/mp4');
+  
+  const mediaCategory = mediaData?.category;
+  const mediaPoster = mediaData?.poster;
+
   const getStreamUrl = (originalUrl, isDirect) => {
     if (isDirect) {
       return originalUrl;
     }
-    return `http://127.0.0.1:8000/proxy/${encodeURIComponent(originalUrl)}`;
+    return `http://127.0.0.1:8000/stream/${encodeURIComponent(originalUrl)}`;
   };
 
   useEffect(() => {
@@ -23,37 +35,64 @@ export default function IPTVPlayer({ channel, onClose }) {
       return;
     }
 
-    const streamUrl = getStreamUrl(channel.url, channel.direct);
+    const streamUrl = getStreamUrl(mediaUrl, isDirect);
 
     const videoJsOptions = {
       autoplay: true,
       controls: true,
       responsive: true,
       fluid: true,
-      liveui: true,
+      liveui: isLive,
+      playbackRates: [0.5, 1, 1.25, 1.5, 2],
+      preload: 'auto',
       sources: [{
         src: streamUrl,
-        type: channel.type || 'application/x-mpegURL'
+        type: mediaType
       }],
       html5: {
         hlsjsConfig: {
           debug: false,
           enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90
+          lowLatencyMode: isLive,
+          backBufferLength: 90,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 600,
+          maxBufferSize: 60 * 1000 * 1000,
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 2,
+          nudgeMaxRetry: 3,
+          maxFragLookUpTolerance: 0.25,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 10,
+          abrEwmaDefaultEstimate: 500000,
+          abrBandWidthFactor: 0.95,
+          abrBandWidthUpFactor: 0.7,
+          startFragPrefetch: true,
+          testBandwidth: true
         },
         vhs: {
           withCredentials: false,
           overrideNative: true,
-          smoothQualityChange: true
-        }
+          smoothQualityChange: true,
+          enableLowInitialPlaylist: true,
+          bandwidth: 4194304,
+          experimentalBufferBasedABR: false
+        },
+        nativeAudioTracks: false,
+        nativeVideoTracks: false
       },
       className: 'vjs-theme-city',
       plugins: {
         hotkeys: {
           volumeStep: 0.1,
           seekStep: 10,
-          enableModifiersForNumbers: false
+          enableModifiersForNumbers: false,
+          fullscreenKey: function(event, player) {
+            return (event.which === 70);
+          },
+          playPauseKey: function(event, player) {
+            return (event.which === 32);
+          }
         }
       }
     };
@@ -62,22 +101,13 @@ export default function IPTVPlayer({ channel, onClose }) {
       if (videoRef.current && !playerRef.current) {
         try {
           playerRef.current = videojs(videoRef.current, videoJsOptions, () => {
-            console.log('Video.js IPTV player is ready');
+            console.log('Video.js player is ready');
             setIsLoading(false);
           });
 
           playerRef.current.on('error', (error) => {
-            console.error('Erreur IPTV:', error);
-            const err = playerRef.current.error();
-            if (err) {
-              if (err.code === 2) {
-                setError('Format de flux non supporté');
-              } else if (err.code === 4) {
-                setError('Impossible de charger le flux (vérifiez votre connexion)');
-              } else {
-                setError(`Erreur de lecture: ${err.message || 'Inconnue'}`);
-              }
-            }
+            console.error('Erreur de lecture:', error);
+            setError('Erreur lors du chargement de la vidéo');
             setIsLoading(false);
           });
 
@@ -91,7 +121,7 @@ export default function IPTVPlayer({ channel, onClose }) {
           });
 
         } catch (err) {
-          console.error('Erreur initialisation IPTV:', err);
+          console.error('Erreur initialisation player:', err);
           setError('Erreur lors de l\'initialisation du lecteur');
           setIsLoading(false);
         }
@@ -144,22 +174,18 @@ export default function IPTVPlayer({ channel, onClose }) {
         playerRef.current = null;
       }
     };
-  }, [channel.url, onClose]);
+  }, [mediaUrl, isDirect, mediaType, isLive, onClose]);
 
   return (
     <div className="iptv-player-overlay">
       <div className="iptv-player-container">
         <div className="iptv-header">
-          <div className="channel-info">
-            <div className="channel-details">
-              <h2>{channel.name}</h2>
-              {channel.category && (
-                <span className="channel-category">{channel.category}</span>
-              )}
-            </div>
-          </div>
+          <h2>{mediaName}</h2>
           <div className="header-right">
-            <span className="live-badge">🔴 LIVE</span>
+            {isLive && <span className="live-badge">🔴 LIVE</span>}
+            <span className="keyboard-hint" title="Raccourcis: Espace (play/pause), F (plein écran), Échap (fermer), ←/→ (navigation)">
+              ⌨️
+            </span>
             <button className="close-button" onClick={onClose}>
               ✕
             </button>
@@ -170,33 +196,18 @@ export default function IPTVPlayer({ channel, onClose }) {
           {isLoading && (
             <div className="loading-overlay">
               <div className="loading-spinner"></div>
-              <p>Connexion au flux en cours...</p>
-              <p className="loading-hint">Cela peut prendre quelques secondes</p>
+              <p>Chargement de la vidéo...</p>
             </div>
           )}
 
           {error && (
             <div className="error-overlay">
               <div className="error-message">
-                <h3>Erreur de connexion</h3>
+                <h3>❌ Erreur de lecture</h3>
                 <p>{error}</p>
-                <div className="error-actions">
-                  <button 
-                    onClick={() => {
-                      setError(null);
-                      setIsLoading(true);
-                      if (playerRef.current) {
-                        playerRef.current.load();
-                      }
-                    }} 
-                    className="retry-btn"
-                  >
-                    Réessayer
-                  </button>
-                  <button onClick={onClose} className="error-close-btn">
-                    Fermer
-                  </button>
-                </div>
+                <button onClick={onClose} className="error-close-btn">
+                  Fermer
+                </button>
               </div>
             </div>
           )}
