@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import VideoPlayer from '../VideoPlayer/VideoPlayer';
+import IPTVPlayer from '../IPTVPlayer/IPTVPlayer';
 import FavoriteButton from '../FavoriteButton/FavoriteButton';
 import './LocalMovieCard.css';
 
@@ -103,7 +103,7 @@ export default function LocalMovieCard({ movie, onDelete }) {
       </div>
 
       {showPlayer && movie.path && (
-        <VideoPlayer 
+        <IPTVPlayer 
           movie={movie} 
           onClose={handleClosePlayer}
         />

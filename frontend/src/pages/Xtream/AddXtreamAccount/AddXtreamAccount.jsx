@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import xtreamService from '../../../services/xtreamService';
 import { validateCredentials, parseXtreamUrl } from '../../../services/xtreamUtils';
@@ -22,6 +22,16 @@ export default function AddXtreamAccount() {
   const [testMode, setTestMode] = useState(false);
   const [urlMode, setUrlMode] = useState(false);
   const [fullUrl, setFullUrl] = useState('');
+
+  useEffect(() => {
+    // Définir l'utilisateur courant au chargement
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+    } else {
+      setError('Utilisateur non connecté');
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,6 +93,16 @@ export default function AddXtreamAccount() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    
+    // Vérifier que l'utilisateur est connecté
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      setError('Utilisateur non connecté');
+      return;
+    }
+    
+    // S'assurer que l'utilisateur est défini dans le service
+    xtreamService.setCurrentUser(parseInt(userId));
     
     const validation = validateCredentials(formData);
     if (!validation.valid) {

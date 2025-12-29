@@ -129,6 +129,16 @@ class FavoriteItem(BaseModel):
     title: str
     metadata: Optional[dict] = None  # Contient les données spécifiques (poster_url, path, etc.)
 
+class XtreamAccount(BaseModel):
+    name: str
+    host: str
+    port: int
+    username: str
+    password: str
+    protocol: Optional[str] = "http"
+    server_info: Optional[dict] = None
+    user_info: Optional[dict] = None
+
 def get_current_user(authorization: str = Header(None)):
     """Récupère l'utilisateur connecté à partir du token"""
     if not authorization:
@@ -364,79 +374,158 @@ def remove_from_favorites(user_id: int, favorite_id: int, authorization: str = H
 # ==================== FIN ENDPOINTS FAVORIS ====================
 
 
-@app.get("/movies/search")
-def search_movies(query: str = Query(..., min_length=1)):
-    results = search_movie(query)
-    return {"results": results}
+# ==================== ENDPOINTS XTREAM ACCOUNTS ====================
 
-@app.get("/movies")
-def list_movies():
+@app.get("/users/{user_id}/xtream-accounts")
+def get_user_xtream_accounts(user_id: int, authorization: str = Header(None)):
+    """Récupère tous les comptes Xtream d'un utilisateur"""
+    user = get_current_user(authorization)
+    
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
     conn = get_connection()
-    cursor = conn.execute("SELECT * FROM stars")
-    movies = [dict(row) for row in cursor.fetchall()]
+    cursor = conn.execute(
+        "SELECT id, name, host, port, username, password, protocol, server_info, user_info, is_active, created_at FROM xtream_accounts WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,)
+    )
+    accounts = []
+    for row in cursor.fetchall():
+        acc = dict(row)
+        if acc['server_info']:
+            acc['server_info'] = json.loads(acc['server_info'])
+        if acc['user_info']:
+            acc['user_info'] = json.loads(acc['user_info'])
+        acc['is_active'] = bool(acc['is_active'])
+        accounts.append(acc)
     conn.close()
-    return {"movies": movies}
+    
+    return {"accounts": accounts}
 
-@app.post("/movies")
-def add_movie(movie: Movie):
+@app.post("/users/{user_id}/xtream-accounts")
+def add_xtream_account(user_id: int, account: XtreamAccount, authorization: str = Header(None)):
+    """Ajoute un compte Xtream pour un utilisateur"""
+    user = get_current_user(authorization)
+    
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Vérifier si c'est le premier compte pour cet utilisateur
+    cursor.execute("SELECT COUNT(*) as count FROM xtream_accounts WHERE user_id = ?", (user_id,))
+    is_first = cursor.fetchone()['count'] == 0
+    
+    server_info_json = json.dumps(account.server_info) if account.server_info else None
+    user_info_json = json.dumps(account.user_info) if account.user_info else None
+    
     cursor.execute(
-        "INSERT INTO stars (title, year, poster_url) VALUES (?, ?, ?)",
-        (movie.title, movie.year, movie.poster_url)
+        """INSERT INTO xtream_accounts 
+        (user_id, name, host, port, username, password, protocol, server_info, user_info, is_active) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (user_id, account.name, account.host, account.port, account.username, 
+         account.password, account.protocol, server_info_json, user_info_json, 1 if is_first else 0)
     )
     conn.commit()
-    movie_id = cursor.lastrowid
+    account_id = cursor.lastrowid
     conn.close()
-    return {"id": movie_id, "message": f"Film '{movie.title}' ajouté"}
+    
+    return {"id": account_id, "message": f"Compte '{account.name}' ajouté"}
 
-@app.delete("/movies/{movie_id}")
-def delete_movie(movie_id: int):
+@app.put("/users/{user_id}/xtream-accounts/{account_id}/activate")
+def activate_xtream_account(user_id: int, account_id: int, authorization: str = Header(None)):
+    """Active un compte Xtream spécifique (désactive les autres)"""
+    user = get_current_user(authorization)
+    
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM stars WHERE id = ?", (movie_id,))
-    conn.commit()
-    conn.close()
     
-    # Réorganiser les IDs pour qu'ils restent consécutifs
-    reorganize_ids("stars")
-    
-    return {"message": f"Film {movie_id} supprimé"}
-
-@app.post("/movies/reorganize-ids")
-def reorganize_movies_ids():
-    """Endpoint pour réorganiser manuellement les IDs des favoris"""
-    try:
-        reorganize_ids("stars")
-        conn = get_connection()
-        cursor = conn.execute("SELECT COUNT(*) as count FROM stars")
-        count = cursor.fetchone()['count']
+    # Vérifier que le compte appartient à l'utilisateur
+    cursor.execute("SELECT id FROM xtream_accounts WHERE id = ? AND user_id = ?", (account_id, user_id))
+    if not cursor.fetchone():
         conn.close()
-        return {
-            "message": "IDs réorganisés avec succès",
-            "total_movies": count
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la réorganisation: {str(e)}")
-
-@app.post("/movies/add_tmdb")
-def add_movie_from_tmdb(movie_req: MovieRequest):
-    title = movie_req.title
-    results = search_movie(title)
-    if not results:
-        return {"message": "Aucun film trouvé"}
+        raise HTTPException(status_code=404, detail="Compte non trouvé")
     
-    movie = results[0]
+    # Désactiver tous les comptes de cet utilisateur
+    cursor.execute("UPDATE xtream_accounts SET is_active = 0 WHERE user_id = ?", (user_id,))
+    
+    # Activer le compte sélectionné
+    cursor.execute("UPDATE xtream_accounts SET is_active = 1 WHERE id = ?", (account_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Compte activé"}
+
+@app.delete("/users/{user_id}/xtream-accounts/{account_id}")
+def delete_xtream_account(user_id: int, account_id: int, authorization: str = Header(None)):
+    """Supprime un compte Xtream"""
+    user = get_current_user(authorization)
+    
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO stars (title, year, poster_url) VALUES (?, ?, ?)",
-        (movie["title"], movie["year"], movie["poster_url"])
-    )
+    
+    # Vérifier que le compte appartient à l'utilisateur
+    cursor.execute("SELECT id, is_active FROM xtream_accounts WHERE id = ? AND user_id = ?", (account_id, user_id))
+    account = cursor.fetchone()
+    if not account:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Compte non trouvé")
+    
+    was_active = account['is_active']
+    
+    # Supprimer le compte
+    cursor.execute("DELETE FROM xtream_accounts WHERE id = ?", (account_id,))
+    
+    # Si le compte supprimé était actif, activer le premier compte restant
+    if was_active:
+        cursor.execute("SELECT id FROM xtream_accounts WHERE user_id = ? ORDER BY created_at ASC LIMIT 1", (user_id,))
+        first_account = cursor.fetchone()
+        if first_account:
+            cursor.execute("UPDATE xtream_accounts SET is_active = 1 WHERE id = ?", (first_account['id'],))
+    
     conn.commit()
-    movie_id = cursor.lastrowid
     conn.close()
-    return {"id": movie_id, "movie": movie}
+    
+    return {"message": "Compte supprimé"}
+
+@app.get("/users/{user_id}/xtream-accounts/active")
+def get_active_xtream_account(user_id: int, authorization: str = Header(None)):
+    """Récupère le compte Xtream actif d'un utilisateur"""
+    user = get_current_user(authorization)
+    
+    if user['id'] != user_id:
+        raise HTTPException(status_code=403, detail="Accès non autorisé")
+    
+    conn = get_connection()
+    cursor = conn.execute(
+        "SELECT id, name, host, port, username, password, protocol, server_info, user_info, is_active, created_at FROM xtream_accounts WHERE user_id = ? AND is_active = 1",
+        (user_id,)
+    )
+    account = cursor.fetchone()
+    conn.close()
+    
+    if not account:
+        return {"account": None}
+    
+    acc = dict(account)
+    if acc['server_info']:
+        acc['server_info'] = json.loads(acc['server_info'])
+    if acc['user_info']:
+        acc['user_info'] = json.loads(acc['user_info'])
+    acc['is_active'] = bool(acc['is_active'])
+    
+    return {"account": acc}
+
+# ==================== FIN ENDPOINTS XTREAM ACCOUNTS ====================
+
 
 @app.get("/movies/local")
 def get_local_movies(enrich_tmdb: bool = Query(default=True)):

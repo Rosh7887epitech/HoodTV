@@ -75,40 +75,6 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='movies'")
-    movies_exists = cursor.fetchone()
-    
-    if movies_exists:
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS stars (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            year INTEGER,
-            poster_url TEXT
-        )
-        """)
-        
-        cursor.execute("SELECT * FROM movies")
-        movies_data = cursor.fetchall()
-        if movies_data:
-            cursor.execute("DELETE FROM stars")
-            for movie in movies_data:
-                cursor.execute(
-                    "INSERT INTO stars (id, title, year, poster_url) VALUES (?, ?, ?, ?)",
-                    (movie['id'], movie['title'], movie['year'], movie['poster_url'])
-                )
-        
-        cursor.execute("DROP TABLE IF EXISTS movies")
-    else:
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS stars (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            year INTEGER,
-            poster_url TEXT
-        )
-        """)
-    
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user'")
     user_exists = cursor.fetchone()
     
@@ -176,6 +142,29 @@ def init_db():
     
     cursor.execute("""
     CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id)
+    """)
+    
+    # Créer la table xtream_accounts pour les comptes Xtream personnels par utilisateur
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS xtream_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        host TEXT NOT NULL,
+        port INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        protocol TEXT DEFAULT 'http',
+        server_info TEXT,
+        user_info TEXT,
+        is_active INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+    )
+    """)
+    
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_xtream_accounts_user_id ON xtream_accounts(user_id)
     """)
     
     conn.commit()
