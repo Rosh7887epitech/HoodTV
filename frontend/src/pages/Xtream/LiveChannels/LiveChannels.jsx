@@ -19,6 +19,10 @@ export default function LiveChannels() {
   const [currentChannel, setCurrentChannel] = useState(null);
 
   useEffect(() => {
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+    }
     loadData();
   }, []);
 
@@ -27,7 +31,7 @@ export default function LiveChannels() {
   }, [channels, searchTerm, selectedCategory]);
 
   const loadData = async () => {
-    const currentAccount = xtreamService.getCurrentAccount();
+    const currentAccount = await xtreamService.getCurrentAccount();
     
     if (!currentAccount) {
       setError('Aucun compte actif. Veuillez configurer un compte Xtream.');

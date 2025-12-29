@@ -11,7 +11,7 @@ import {
   getExtension 
 } from '../../../services/xtreamUtils';
 import BackButton from '../../../components/BackButton/BackButton';
-import VideoPlayer from '../../../components/VideoPlayer/VideoPlayer';
+import IPTVPlayer from '../../../components/IPTVPlayer/IPTVPlayer';
 import './Movies.css';
 
 export default function Movies() {
@@ -29,6 +29,11 @@ export default function Movies() {
   const [movieDetails, setMovieDetails] = useState(null);
 
   useEffect(() => {
+    // Définir l'utilisateur courant
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+    }
     loadData();
   }, []);
 
@@ -37,7 +42,7 @@ export default function Movies() {
   }, [movies, searchTerm, selectedCategory, sortBy]);
 
   const loadData = async () => {
-    const currentAccount = xtreamService.getCurrentAccount();
+    const currentAccount = await xtreamService.getCurrentAccount();
     
     if (!currentAccount) {
       setError('Aucun compte actif. Veuillez configurer un compte Xtream.');
@@ -49,13 +54,16 @@ export default function Movies() {
     setError('');
 
     try {
-      const [moviesData, categoriesData] = await Promise.all([
-        xtreamService.getVodStreams(),
-        xtreamService.getVodCategories()
-      ]);
-
-      setMovies(moviesData || []);
+      const categoriesData = await xtreamService.getVodCategories();
       setCategories(categoriesData || []);
+      
+      if (categoriesData && categoriesData.length > 0) {
+        const firstCategoryId = categoriesData[0].category_id;
+        setSelectedCategory(firstCategoryId);
+        
+        const moviesData = await xtreamService.getVodStreamsByCategory(firstCategoryId);
+        setMovies(moviesData || []);
+      }
     } catch (err) {
       setError(err.message || 'Erreur lors du chargement des films');
     } finally {
@@ -66,13 +74,8 @@ export default function Movies() {
   const applyFilters = () => {
     let filtered = [...movies];
     
-    // Filtre par recherche
     filtered = filterByName(filtered, searchTerm);
     
-    // Filtre par catégorie
-    filtered = filterByCategory(filtered, selectedCategory);
-    
-    // Tri
     if (sortBy === 'name') {
       filtered = sortByName(filtered, 'asc');
     } else if (sortBy === 'date') {
@@ -82,9 +85,28 @@ export default function Movies() {
     setFilteredMovies(filtered);
   };
 
+  const handleCategoryChange = async (categoryId) => {
+    setSelectedCategory(categoryId);
+    setLoading(true);
+    setSearchTerm('');
+    
+    try {
+      if (categoryId === 'all') {
+        const moviesData = await xtreamService.getVodStreams();
+        setMovies(moviesData || []);
+      } else {
+        const moviesData = await xtreamService.getVodStreamsByCategory(categoryId);
+        setMovies(moviesData || []);
+      }
+    } catch (err) {
+      setError(err.message || 'Erreur lors du chargement des films');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePlayMovie = async (movie) => {
     try {
-      // Charger les détails du film pour avoir toutes les infos
       const details = await xtreamService.getVodInfo(movie.stream_id);
       
       const extension = getExtension(movie.container_extension);
@@ -93,10 +115,10 @@ export default function Movies() {
       setMovieDetails(details);
       setCurrentMovie({
         name: movie.name,
-        path: streamUrl, // URL directe Xtream
+        path: streamUrl,
         poster: movie.stream_icon || movie.cover,
         info: details?.info || {},
-        direct: true // Flag pour utiliser l'URL directe sans proxy
+        direct: true
       });
     } catch (err) {
       alert(`Erreur lors du chargement du film: ${err.message}`);
@@ -161,7 +183,7 @@ export default function Movies() {
           <select
             className="category-select"
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
           >
             <option value="all">Toutes les catégories</option>
             {categories.map(cat => (
@@ -262,7 +284,7 @@ export default function Movies() {
               </div>
             )}
             
-            <VideoPlayer
+            <IPTVPlayer
               movie={currentMovie}
               onClose={handleClosePlayer}
             />

@@ -1,78 +1,53 @@
 import axios from 'axios';
 
+const API_URL = 'http://127.0.0.1:8000';
+
 /**
  * Service pour gérer les connexions et requêtes vers les serveurs Xtream Codes
- * 
- * Architecture Xtream Codes API:
- * - Base URL: http(s)://HOST:PORT/player_api.php
- * - Authentification: username & password dans les query params
- * - Actions: get_live_streams, get_vod_streams, get_series, etc.
+ * Les comptes sont maintenant stockés dans la base de données par utilisateur
  */
 
 class XtreamService {
   constructor() {
-    this.accounts = this.loadAccounts();
-    this.currentAccount = this.loadCurrentAccount();
+    this.currentUserId = null;
+    this.currentAccount = null;
   }
 
   /**
-   * Charge les comptes Xtream sauvegardés depuis le localStorage
-   * @returns {Array} Liste des comptes
+   * Définit l'utilisateur courant
+   * @param {number} userId - ID de l'utilisateur
    */
-  loadAccounts() {
-    try {
-      const saved = localStorage.getItem('xtream_accounts');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Erreur lors du chargement des comptes:', error);
-      return [];
-    }
+  setCurrentUser(userId) {
+    this.currentUserId = userId;
+    this.currentAccount = null;
   }
 
   /**
-   * Sauvegarde les comptes dans le localStorage
-   * @param {Array} accounts - Liste des comptes à sauvegarder
+   * Récupère le token d'authentification
+   * @returns {string|null} Token JWT
    */
-  saveAccounts(accounts) {
-    try {
-      localStorage.setItem('xtream_accounts', JSON.stringify(accounts));
-      this.accounts = accounts;
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des comptes:', error);
-      throw new Error('Impossible de sauvegarder les comptes');
-    }
+  getAuthToken() {
+    return localStorage.getItem('token');
   }
 
   /**
-   * Charge le compte actif depuis le localStorage
-   * @returns {Object|null} Le compte actif ou null
+   * Headers pour les requêtes authentifiées
+   * @returns {Object} Headers avec authorization
    */
-  loadCurrentAccount() {
-    try {
-      const saved = localStorage.getItem('xtream_current_account');
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      console.error('Erreur lors du chargement du compte actif:', error);
-      return null;
+  getAuthHeaders() {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error('Non authentifié');
     }
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    };
   }
 
   /**
-   * Définit le compte actif
-   * @param {Object} account - Le compte à activer
-   */
-  setCurrentAccount(account) {
-    try {
-      localStorage.setItem('xtream_current_account', JSON.stringify(account));
-      this.currentAccount = account;
-    } catch (error) {
-      console.error('Erreur lors de la définition du compte actif:', error);
-      throw new Error('Impossible de définir le compte actif');
-    }
-  }
-
-  /**
-   * Construit l'URL de base pour les requêtes API
+   * Construit l'URL de base pour les requêtes API Xtream
    * @param {Object} account - Compte Xtream avec host, port, username, password
    * @returns {string} URL de base
    */
@@ -124,68 +99,135 @@ class XtreamService {
   }
 
   /**
+   * Récupère tous les comptes Xtream de l'utilisateur
+   * @returns {Promise<Array>} Liste des comptes
+   */
+  async getAllAccounts() {
+    if (!this.currentUserId) {
+      throw new Error('Utilisateur non défini');
+    }
+
+    try {
+      const response = await axios.get(
+        `${API_URL}/users/${this.currentUserId}/xtream-accounts`,
+        this.getAuthHeaders()
+      );
+      return response.data.accounts || [];
+    } catch (error) {
+      console.error('Erreur lors du chargement des comptes:', error);
+      throw new Error('Impossible de charger les comptes');
+    }
+  }
+
+  /**
+   * Récupère le compte actif de l'utilisateur
+   * @returns {Promise<Object|null>} Le compte actif ou null
+   */
+  async getCurrentAccount() {
+    if (!this.currentUserId) {
+      throw new Error('Utilisateur non défini');
+    }
+
+    try {
+      const response = await axios.get(
+        `${API_URL}/users/${this.currentUserId}/xtream-accounts/active`,
+        this.getAuthHeaders()
+      );
+      this.currentAccount = response.data.account;
+      return this.currentAccount;
+    } catch (error) {
+      console.error('Erreur lors du chargement du compte actif:', error);
+      this.currentAccount = null;
+      return null;
+    }
+  }
+
+  /**
    * Ajoute un nouveau compte Xtream
    * @param {Object} credentials - Informations de connexion
    * @returns {Promise<Object>} Le compte ajouté
    */
   async addAccount(credentials) {
+    if (!this.currentUserId) {
+      throw new Error('Utilisateur non défini');
+    }
+
     const testResult = await this.testConnection(credentials);
 
-    const newAccount = {
-      id: Date.now().toString(),
+    const accountData = {
       name: credentials.name || `${credentials.username}@${credentials.host}`,
       host: credentials.host,
       port: credentials.port,
       username: credentials.username,
       password: credentials.password,
       protocol: credentials.protocol || 'http',
-      serverInfo: testResult.serverInfo,
-      userInfo: testResult.userInfo,
-      addedAt: new Date().toISOString()
+      server_info: testResult.serverInfo,
+      user_info: testResult.userInfo
     };
 
-    const accounts = [...this.accounts, newAccount];
-    this.saveAccounts(accounts);
+    try {
+      const response = await axios.post(
+        `${API_URL}/users/${this.currentUserId}/xtream-accounts`,
+        accountData,
+        this.getAuthHeaders()
+      );
+      
+      // Recharger le compte actif
+      await this.getCurrentAccount();
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du compte:', error);
+      throw new Error('Impossible d\'ajouter le compte');
+    }
+  }
 
-    if (accounts.length === 1) {
-      this.setCurrentAccount(newAccount);
+  /**
+   * Active un compte Xtream spécifique
+   * @param {number} accountId - ID du compte à activer
+   * @returns {Promise<void>}
+   */
+  async setCurrentAccount(accountId) {
+    if (!this.currentUserId) {
+      throw new Error('Utilisateur non défini');
     }
 
-    return newAccount;
+    try {
+      await axios.put(
+        `${API_URL}/users/${this.currentUserId}/xtream-accounts/${accountId}/activate`,
+        {},
+        this.getAuthHeaders()
+      );
+      
+      // Recharger le compte actif
+      await this.getCurrentAccount();
+    } catch (error) {
+      console.error('Erreur lors de l\'activation du compte:', error);
+      throw new Error('Impossible d\'activer le compte');
+    }
   }
 
   /**
    * Supprime un compte
-   * @param {string} accountId - ID du compte à supprimer
+   * @param {number} accountId - ID du compte à supprimer
    */
-  removeAccount(accountId) {
-    const accounts = this.accounts.filter(acc => acc.id !== accountId);
-    this.saveAccounts(accounts);
-
-    if (this.currentAccount?.id === accountId) {
-      this.currentAccount = accounts.length > 0 ? accounts[0] : null;
-      if (this.currentAccount) {
-        this.setCurrentAccount(this.currentAccount);
-      } else {
-        localStorage.removeItem('xtream_current_account');
-      }
+  async removeAccount(accountId) {
+    if (!this.currentUserId) {
+      throw new Error('Utilisateur non défini');
     }
-  }
 
-  /**
-   * Récupère tous les comptes
-   * @returns {Array} Liste des comptes
-   */
-  getAllAccounts() {
-    return this.accounts;
-  }
-
-  /**
-   * Récupère le compte actif
-   * @returns {Object|null} Le compte actif
-   */
-  getCurrentAccount() {
-    return this.currentAccount;
+    try {
+      await axios.delete(
+        `${API_URL}/users/${this.currentUserId}/xtream-accounts/${accountId}`,
+        this.getAuthHeaders()
+      );
+      
+      // Recharger le compte actif
+      await this.getCurrentAccount();
+    } catch (error) {
+      console.error('Erreur lors de la suppression du compte:', error);
+      throw new Error('Impossible de supprimer le compte');
+    }
   }
 
   /**
@@ -195,7 +237,12 @@ class XtreamService {
    * @returns {Promise<Object>} Résultat de l'API
    */
   async apiRequest(action, account = null) {
-    const acc = account || this.currentAccount;
+    let acc = account;
+    
+    if (!acc) {
+      // Si pas de compte fourni, charger le compte actif
+      acc = this.currentAccount || await this.getCurrentAccount();
+    }
 
     if (!acc) {
       throw new Error('Aucun compte actif. Veuillez configurer un compte Xtream.');
@@ -244,6 +291,15 @@ class XtreamService {
   }
 
   /**
+   * Récupère les films VOD d'une catégorie spécifique
+   * @param {string} categoryId - ID de la catégorie
+   * @returns {Promise<Array>} Liste des films de la catégorie
+   */
+  async getVodStreamsByCategory(categoryId) {
+    return await this.apiRequest(`get_vod_streams&category_id=${categoryId}`);
+  }
+
+  /**
    * Récupère les catégories VOD
    * @returns {Promise<Array>} Liste des catégories
    */
@@ -266,6 +322,15 @@ class XtreamService {
    */
   async getSeries() {
     return await this.apiRequest('get_series');
+  }
+
+  /**
+   * Récupère les séries d'une catégorie spécifique
+   * @param {string} categoryId - ID de la catégorie
+   * @returns {Promise<Array>} Liste des séries de la catégorie
+   */
+  async getSeriesByCategory(categoryId) {
+    return await this.apiRequest(`get_series&category_id=${categoryId}`);
   }
 
   /**
@@ -292,11 +357,12 @@ class XtreamService {
    * @returns {string} URL de lecture
    */
   getLiveUrl(streamId, extension = 'm3u8') {
-    if (!this.currentAccount) {
+    const acc = this.currentAccount;
+    if (!acc) {
       throw new Error('Aucun compte actif');
     }
 
-    const { host, port, username, password, protocol } = this.currentAccount;
+    const { host, port, username, password, protocol } = acc;
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     return `${protocol}://${cleanHost}:${port}/live/${username}/${password}/${streamId}.${extension}`;
   }
@@ -308,11 +374,12 @@ class XtreamService {
    * @returns {string} URL de lecture
    */
   getVodUrl(streamId, extension = 'mp4') {
-    if (!this.currentAccount) {
+    const acc = this.currentAccount;
+    if (!acc) {
       throw new Error('Aucun compte actif');
     }
 
-    const { host, port, username, password, protocol } = this.currentAccount;
+    const { host, port, username, password, protocol } = acc;
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     return `${protocol}://${cleanHost}:${port}/movie/${username}/${password}/${streamId}.${extension}`;
   }
@@ -324,11 +391,12 @@ class XtreamService {
    * @returns {string} URL de lecture
    */
   getSeriesUrl(episodeId, extension = 'mp4') {
-    if (!this.currentAccount) {
+    const acc = this.currentAccount;
+    if (!acc) {
       throw new Error('Aucun compte actif');
     }
 
-    const { host, port, username, password, protocol } = this.currentAccount;
+    const { host, port, username, password, protocol } = acc;
     const cleanHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
     return `${protocol}://${cleanHost}:${port}/series/${username}/${password}/${episodeId}.${extension}`;
   }

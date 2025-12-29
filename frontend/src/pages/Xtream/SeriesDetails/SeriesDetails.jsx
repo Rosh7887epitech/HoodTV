@@ -9,7 +9,7 @@ import {
   getExtension 
 } from '../../../services/xtreamUtils';
 import BackButton from '../../../components/BackButton/BackButton';
-import VideoPlayer from '../../../components/VideoPlayer/VideoPlayer';
+import IPTVPlayer from '../../../components/IPTVPlayer/IPTVPlayer';
 import './SeriesDetails.css';
 
 export default function SeriesDetails() {
@@ -27,11 +27,16 @@ export default function SeriesDetails() {
   const seriesData = location.state?.series;
 
   useEffect(() => {
+    // Définir l'utilisateur courant
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+    }
     loadSeriesInfo();
   }, [seriesId]);
 
   const loadSeriesInfo = async () => {
-    const currentAccount = xtreamService.getCurrentAccount();
+    const currentAccount = await xtreamService.getCurrentAccount();
     
     if (!currentAccount) {
       setError('Aucun compte actif.');
@@ -261,7 +266,7 @@ export default function SeriesDetails() {
         <div className="player-modal">
           <div className="player-modal-overlay" onClick={handleClosePlayer}></div>
           <div className="player-modal-content">
-            <VideoPlayer
+            <IPTVPlayer
               movie={currentEpisode}
               onClose={handleClosePlayer}
             />

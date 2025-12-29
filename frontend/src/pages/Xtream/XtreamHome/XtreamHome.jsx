@@ -11,31 +11,49 @@ export default function XtreamHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAccounts();
+    // Définir l'utilisateur courant et charger les comptes
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+      loadAccounts();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const loadAccounts = () => {
+  const loadAccounts = async () => {
     setLoading(true);
-    const allAccounts = xtreamService.getAllAccounts();
-    const current = xtreamService.getCurrentAccount();
-    
-    setAccounts(allAccounts);
-    setCurrentAccount(current);
-    setLoading(false);
-  };
-
-  const handleAccountChange = (accountId) => {
-    const account = accounts.find(acc => acc.id === accountId);
-    if (account) {
-      xtreamService.setCurrentAccount(account);
-      setCurrentAccount(account);
+    try {
+      const allAccounts = await xtreamService.getAllAccounts();
+      const current = await xtreamService.getCurrentAccount();
+      
+      setAccounts(allAccounts);
+      setCurrentAccount(current);
+    } catch (error) {
+      console.error('Erreur lors du chargement des comptes:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteAccount = (accountId) => {
+  const handleAccountChange = async (accountId) => {
+    try {
+      await xtreamService.setCurrentAccount(parseInt(accountId));
+      const current = await xtreamService.getCurrentAccount();
+      setCurrentAccount(current);
+    } catch (error) {
+      console.error('Erreur lors du changement de compte:', error);
+    }
+  };
+
+  const handleDeleteAccount = async (accountId) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce compte ?')) {
-      xtreamService.removeAccount(accountId);
-      loadAccounts();
+      try {
+        await xtreamService.removeAccount(accountId);
+        await loadAccounts();
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+      }
     }
   };
 

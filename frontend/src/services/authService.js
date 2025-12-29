@@ -14,6 +14,8 @@ const authService = {
       if (response.data.access_token) {
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('user', JSON.stringify({ name }));
+        // Note: Le register ne renvoie pas l'ID, on devrait appeler /auth/me après
+        // Pour l'instant on va supposer que le register est suivi d'un login
       }
       
       return response.data;
@@ -32,6 +34,7 @@ const authService = {
       if (response.data.access_token) {
         localStorage.setItem('token', response.data.access_token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('userId', response.data.user.id);
       }
       
       return response.data;
@@ -76,6 +79,7 @@ const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('userId');
   },
 
   getToken: () => {

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import xtreamService from '../../../services/xtreamService';
 import { 
   filterByName, 
-  filterByCategory, 
   sortByName, 
   getImageUrl 
 } from '../../../services/xtreamUtils';
@@ -22,15 +21,20 @@ export default function Series() {
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
+    // Définir l'utilisateur courant
+    const userId = localStorage.getItem('userId');
+    if (userId) {
+      xtreamService.setCurrentUser(parseInt(userId));
+    }
     loadData();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [series, searchTerm, selectedCategory]);
+  }, [series, searchTerm]);
 
   const loadData = async () => {
-    const currentAccount = xtreamService.getCurrentAccount();
+    const currentAccount = await xtreamService.getCurrentAccount();
     
     if (!currentAccount) {
       setError('Aucun compte actif. Veuillez configurer un compte Xtream.');
@@ -42,13 +46,16 @@ export default function Series() {
     setError('');
 
     try {
-      const [seriesData, categoriesData] = await Promise.all([
-        xtreamService.getSeries(),
-        xtreamService.getSeriesCategories()
-      ]);
-
-      setSeries(seriesData || []);
+      const categoriesData = await xtreamService.getSeriesCategories();
       setCategories(categoriesData || []);
+      
+      if (categoriesData && categoriesData.length > 0) {
+        const firstCategoryId = categoriesData[0].category_id;
+        setSelectedCategory(firstCategoryId);
+        
+        const seriesData = await xtreamService.getSeriesByCategory(firstCategoryId);
+        setSeries(seriesData || []);
+      }
     } catch (err) {
       setError(err.message || 'Erreur lors du chargement des séries');
     } finally {
@@ -60,9 +67,28 @@ export default function Series() {
     let filtered = [...series];
     
     filtered = filterByName(filtered, searchTerm);
-    filtered = filterByCategory(filtered, selectedCategory);
     filtered = sortByName(filtered, 'asc');
     setFilteredSeries(filtered);
+  };
+
+  const handleCategoryChange = async (categoryId) => {
+    setSelectedCategory(categoryId);
+    setLoading(true);
+    setSearchTerm('');
+    
+    try {
+      if (categoryId === 'all') {
+        const seriesData = await xtreamService.getSeries();
+        setSeries(seriesData || []);
+      } else {
+        const seriesData = await xtreamService.getSeriesByCategory(categoryId);
+        setSeries(seriesData || []);
+      }
+    } catch (err) {
+      setError(err.message || 'Erreur lors du chargement des séries');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSeriesClick = (seriesItem) => {
@@ -108,7 +134,6 @@ export default function Series() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="filters-section">
         <div className="search-box">
           <input
@@ -124,7 +149,7 @@ export default function Series() {
           <select
             className="category-select"
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
           >
             <option value="all">Toutes les catégories</option>
             {categories.map(cat => (
@@ -136,7 +161,6 @@ export default function Series() {
         </div>
       </div>
 
-      {/* Series Grid */}
       {filteredSeries.length === 0 ? (
         <div className="empty-result">
           <p className="empty-icon">🔍</p>
