@@ -10,6 +10,7 @@ import { Footer } from './components/Footer';
 import { StatCard } from './components/StatCard';
 import { CovidMap } from './components/CovidMap';
 import { TrendChart } from './components/TrendChart';
+import { CountryComparison } from './components/CountryComparison';
 import { 
   covidApi, 
   GlobalStats, 
@@ -159,6 +160,10 @@ function App() {
             data={historyData} 
             loading={loading}
           />
+        </div>
+
+        <div className="mb-8">
+          <CountryComparison />
         </div>
       </main>
 
