@@ -1,9 +1,4 @@
-"""
-COVID-19 DataViz Backend - FastAPI Application
 
-Main application entry point with CORS configuration and route registration.
-Epitech Project - Professional Implementation
-"""
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,14 +9,11 @@ import logging
 from app.api import stats
 from app.models.schemas import HealthCheckResponse
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-# Create FastAPI application
 app = FastAPI(
     title="COVID-19 DataViz API",
     description="""
@@ -58,21 +50,18 @@ app = FastAPI(
     }
 )
 
-# CORS Configuration - Allow frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # React dev server
-        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",
+        "http://localhost:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173"
     ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
-# Register API routes
 app.include_router(stats.router, prefix="/api")
 
 
@@ -83,11 +72,6 @@ app.include_router(stats.router, prefix="/api")
     tags=["System"]
 )
 async def root() -> HealthCheckResponse:
-    """
-    Root endpoint - API health check.
-    
-    Returns the current status and version of the API.
-    """
     return HealthCheckResponse(
         status="healthy",
         version="1.0.0",
@@ -103,11 +87,6 @@ async def root() -> HealthCheckResponse:
     tags=["System"]
 )
 async def health_check() -> HealthCheckResponse:
-    """
-    Detailed health check endpoint.
-    
-    Verifies that the API and all its dependencies are functioning correctly.
-    """
     try:
         from app.core.data_provider import get_data_provider
         provider = get_data_provider()
@@ -130,11 +109,6 @@ async def health_check() -> HealthCheckResponse:
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Global exception handler for unhandled errors.
-    
-    Ensures all errors are logged and returned in a consistent format.
-    """
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -148,11 +122,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("startup")
 async def startup_event():
-    """
-    Application startup event handler.
-    
-    Initializes the data provider and performs any necessary setup.
-    """
     logger.info("COVID-19 DataViz API starting up...")
     logger.info("Data source: Johns Hopkins CSSE GitHub Repository")
     logger.info("Cache duration: 6 hours")
@@ -161,11 +130,6 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """
-    Application shutdown event handler.
-    
-    Performs cleanup operations before the application stops.
-    """
     logger.info("COVID-19 DataViz API shutting down...")
 
 
@@ -175,6 +139,6 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,  # Hot reload for development
+        reload=True,
         log_level="info"
     )

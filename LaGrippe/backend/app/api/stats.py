@@ -1,8 +1,4 @@
-"""
-COVID-19 Statistics API Endpoints
 
-Provides REST API for COVID-19 data visualization dashboard.
-"""
 
 from fastapi import APIRouter, HTTPException, status, Query
 from datetime import datetime
@@ -14,7 +10,10 @@ from app.models.schemas import (
     MapResponse,
     HistoryResponse,
     LocationData,
-    ErrorResponse
+    ErrorResponse,
+    CountryComparisonResponse,
+    CountryTimeSeriesData,
+    CountryListItem
 )
 from app.core.data_provider import get_data_provider
 
@@ -33,12 +32,6 @@ router = APIRouter(prefix="/stats", tags=["Statistics"])
     }
 )
 async def get_global_stats() -> GlobalStats:
-    """
-    Retrieve global COVID-19 statistics.
-    
-    This endpoint aggregates data from all countries and regions to provide
-    worldwide totals for all COVID-19 metrics.
-    """
     try:
         provider = get_data_provider()
         totals = provider.get_global_totals()
@@ -73,16 +66,6 @@ async def get_global_stats() -> GlobalStats:
 async def get_map_data(
     date: str = Query(None, description="Date to retrieve data for (e.g., '3/15/23'). If not provided, latest date is used.")
 ) -> MapResponse:
-    """
-    Retrieve data for interactive map visualization.
-    
-    Returns a list of all geographic locations with their coordinates and
-    COVID-19 case counts for the specified date (confirmed, deaths, recovered, active).
-    Ideal for plotting on interactive maps like Leaflet.
-    
-    Args:
-        date: Optional date string (e.g., '3/15/23'). If not provided, uses latest available date.
-    """
     try:
         provider = get_data_provider()
         map_data = provider.get_map_data(date=date)
@@ -120,12 +103,6 @@ async def get_map_data(
     }
 )
 async def get_available_dates() -> List[str]:
-    """
-    Retrieve all available dates from the COVID-19 dataset.
-    
-    Returns a list of date strings in chronological order, which can be used
-    to filter map data by specific dates.
-    """
     try:
         provider = get_data_provider()
         dates = provider.get_available_dates()
@@ -150,13 +127,6 @@ async def get_available_dates() -> List[str]:
     }
 )
 async def get_history_data() -> HistoryResponse:
-    """
-    Retrieve historical time series data for trend visualization.
-    
-    Returns arrays of daily totals for all COVID-19 metrics, enabling
-    the creation of line charts and trend analysis graphs.
-    Data starts from January 22, 2020 (first recorded date).
-    """
     try:
         provider = get_data_provider()
         history = provider.get_time_series_history()
@@ -190,15 +160,6 @@ async def get_history_data() -> HistoryResponse:
     }
 )
 async def get_country_stats(country_name: str) -> Dict:
-    """
-    Retrieve COVID-19 statistics for a specific country.
-    
-    Args:
-        country_name: Name of the country (e.g., 'France', 'US', 'Germany')
-    
-    Returns:
-        Dictionary with time series data for the specified country
-    """
     try:
         provider = get_data_provider()
         country_data = provider.get_country_data(country_name)
@@ -237,12 +198,6 @@ async def get_country_stats(country_name: str) -> Dict:
     }
 )
 async def clear_cache() -> Dict[str, str]:
-    """
-    Clear all cached COVID-19 data.
-    
-    Forces the system to fetch fresh data from GitHub on the next API call.
-    Useful for testing or when immediate data updates are required.
-    """
     try:
         provider = get_data_provider()
         provider.clear_cache()
@@ -258,4 +213,80 @@ async def clear_cache() -> Dict[str, str]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear cache: {str(e)}"
+        )
+
+
+@router.get(
+    "/countries",
+    response_model=List[CountryListItem],
+    summary="Get List of All Countries",
+    description="Returns a list of all available countries with their latest totals, sorted by confirmed cases.",
+    responses={
+        200: {"model": List[CountryListItem]},
+        500: {"model": ErrorResponse, "description": "Internal server error"}
+    }
+)
+async def get_countries_list() -> List[CountryListItem]:
+    try:
+        provider = get_data_provider()
+        countries = provider.get_available_countries()
+        
+        return [CountryListItem(**country) for country in countries]
+    
+    except Exception as e:
+        logger.error(f"Error fetching countries list: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch countries list: {str(e)}"
+        )
+
+
+@router.get(
+    "/compare",
+    response_model=CountryComparisonResponse,
+    summary="Compare Multiple Countries",
+    description="Returns time series comparison data for specified countries, enabling side-by-side analysis.",
+    responses={
+        200: {"model": CountryComparisonResponse},
+        400: {"model": ErrorResponse, "description": "Invalid country names or empty list"},
+        500: {"model": ErrorResponse, "description": "Internal server error"}
+    }
+)
+async def compare_countries(
+    countries: List[str] = Query(..., description="List of country names to compare (e.g., ['France', 'US', 'Germany'])")
+) -> CountryComparisonResponse:
+    try:
+        if not countries or len(countries) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one country must be specified"
+            )
+        
+        if len(countries) > 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum 10 countries can be compared at once"
+            )
+        
+        provider = get_data_provider()
+        comparison = provider.get_countries_comparison(countries)
+        
+        countries_data = [
+            CountryTimeSeriesData(**country_data)
+            for country_data in comparison['countries']
+        ]
+        
+        return CountryComparisonResponse(
+            countries=countries_data,
+            dates=comparison['dates'],
+            last_update=datetime.now().isoformat()
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error comparing countries: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to compare countries: {str(e)}"
         )

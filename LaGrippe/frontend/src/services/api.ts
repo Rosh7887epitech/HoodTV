@@ -51,6 +51,28 @@ export interface HistoryResponse {
   last_update: string;
 }
 
+export interface CountryListItem {
+  name: string;
+  total_confirmed: number;
+  total_deaths: number;
+  total_recovered: number;
+}
+
+export interface CountryTimeSeriesData {
+  country: string;
+  dates: string[];
+  confirmed: number[];
+  deaths: number[];
+  recovered: number[];
+  active: number[];
+}
+
+export interface CountryComparisonResponse {
+  countries: CountryTimeSeriesData[];
+  dates: string[];
+  last_update: string;
+}
+
 export const covidApi = {
   async getGlobalStats(): Promise<GlobalStats> {
     const response = await apiClient.get<GlobalStats>('/stats/global');
@@ -71,6 +93,24 @@ export const covidApi = {
 
   async getHistoryData(): Promise<HistoryResponse> {
     const response = await apiClient.get<HistoryResponse>('/stats/history');
+    return response.data;
+  },
+
+  async getCountriesList(): Promise<CountryListItem[]> {
+    const response = await apiClient.get<CountryListItem[]>('/stats/countries');
+    return response.data;
+  },
+
+  async compareCountries(countries: string[]): Promise<CountryComparisonResponse> {
+    const response = await apiClient.get<CountryComparisonResponse>(
+      '/stats/compare',
+      { 
+        params: { countries },
+        paramsSerializer: {
+          indexes: null, // This removes the brackets from array params
+        }
+      }
+    );
     return response.data;
   },
 
