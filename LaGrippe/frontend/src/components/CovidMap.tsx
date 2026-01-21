@@ -68,14 +68,14 @@ export const CovidMap: React.FC<CovidMapProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-slate-800 rounded-lg p-6 shadow-lg border border-slate-700 h-[600px] flex items-center justify-center">
+      <div className="bg-slate-900/50 rounded-lg p-6 shadow-lg shadow-blue-500/30 border-2 border-white/20 h-[600px] flex items-center justify-center hover:bg-slate-900/60 hover:-translate-y-1 transition-all">
         <div className="text-slate-400 text-lg">Loading map data...</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6 shadow-lg border border-slate-700">
+    <div className="bg-slate-900/50 rounded-lg p-6 shadow-lg shadow-blue-500/30 border-2 border-white/20 hover:bg-slate-900/60 hover:-translate-y-1 transition-all">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Global Distribution Map</h2>
         {selectedDate && (

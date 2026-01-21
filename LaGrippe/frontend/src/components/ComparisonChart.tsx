@@ -73,14 +73,14 @@ export function ComparisonChart({ countries, metric, title }: ComparisonChartPro
 
   if (!countries || countries.length === 0) {
     return (
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-8 text-center">
+      <div className="bg-slate-900/50 border-2 border-white/20 rounded-lg p-8 text-center shadow-lg shadow-blue-500/30 hover:bg-slate-900/60 hover:-translate-y-1 transition-all">
         <p className="text-slate-400">No data to display</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+    <div className="bg-slate-900/50 border-2 border-white/20 rounded-lg p-6 shadow-lg shadow-blue-500/30 hover:bg-slate-900/60 hover:-translate-y-1 transition-all">
       <h3 className="text-xl font-semibold text-white mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData}>

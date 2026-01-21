@@ -11,6 +11,10 @@ import { StatCard } from './components/StatCard';
 import { CovidMap } from './components/CovidMap';
 import { TrendChart } from './components/TrendChart';
 import { CountryComparison } from './components/CountryComparison';
+import { CountrySelector } from './components/CountrySelector';
+import { CountryDetail } from './components/CountryDetail';
+import { PredictionPanel } from './components/PredictionPanel';
+import { DistributionChart } from './components/DistributionChart';
 import { 
   covidApi, 
   GlobalStats, 
@@ -27,6 +31,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [mapLoading, setMapLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -145,6 +150,12 @@ function App() {
           />
         </div>
 
+        {globalStats && (
+          <div className="mb-8">
+            <DistributionChart stats={globalStats} loading={loading} />
+          </div>
+        )}
+
         <div className="mb-8">
           <CovidMap 
             locations={mapData?.locations || []} 
@@ -165,9 +176,24 @@ function App() {
         <div className="mb-8">
           <CountryComparison />
         </div>
+
+        <div className="mb-8">
+          <PredictionPanel />
+        </div>
+
+        <div className="mb-8">
+          <CountrySelector onSelectCountry={(country) => setSelectedCountry(country)} />
+        </div>
       </main>
 
       <Footer />
+
+      {selectedCountry && (
+        <CountryDetail
+          countryName={selectedCountry}
+          onClose={() => setSelectedCountry(null)}
+        />
+      )}
     </div>
   );
 }

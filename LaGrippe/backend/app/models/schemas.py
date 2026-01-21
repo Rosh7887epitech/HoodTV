@@ -157,3 +157,97 @@ class CountryListItem(BaseModel):
                 "total_recovered": 39000000
             }
         }
+
+
+class LinearPredictions(BaseModel):
+    dates: List[str] = Field(..., description="Future dates for predictions")
+    confirmed: List[float] = Field(..., description="Predicted confirmed cases")
+    deaths: List[float] = Field(..., description="Predicted deaths")
+
+
+class PolynomialTrend(BaseModel):
+    confirmed: List[float] = Field(..., description="Polynomial fitted values for confirmed cases")
+    deaths: List[float] = Field(..., description="Polynomial fitted values for deaths")
+    confirmed_r2: float = Field(..., description="R² score for confirmed cases fit")
+    deaths_r2: float = Field(..., description="R² score for deaths fit")
+
+
+class PredictionResponse(BaseModel):
+    current_value: int = Field(..., description="Current confirmed cases")
+    current_deaths: int = Field(..., description="Current deaths")
+    linear_predictions: LinearPredictions = Field(..., description="7-day linear predictions")
+    polynomial_trend: PolynomialTrend = Field(..., description="Polynomial trend fitting")
+    growth_rate: float = Field(..., description="Average growth rate (last 7 days)")
+    days_to_10_percent_increase: Optional[int] = Field(None, description="Estimated days to reach 10% increase")
+    threshold_10_percent: int = Field(..., description="Target value for 10% increase")
+    dates: List[str] = Field(..., description="Historical dates")
+    last_update: str = Field(..., description="Last update timestamp")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_value": 700000000,
+                "current_deaths": 7000000,
+                "linear_predictions": {
+                    "dates": ["3/24/23", "3/25/23"],
+                    "confirmed": [700100000, 700200000],
+                    "deaths": [7001000, 7002000]
+                },
+                "polynomial_trend": {
+                    "confirmed": [],
+                    "deaths": [],
+                    "confirmed_r2": 0.98,
+                    "deaths_r2": 0.97
+                },
+                "growth_rate": 0.05,
+                "days_to_10_percent_increase": 145,
+                "threshold_10_percent": 770000000,
+                "dates": [],
+                "last_update": "2024-01-07T12:00:00"
+            }
+        }
+
+
+class CountryDetailStats(BaseModel):
+    name: str = Field(..., description="Country name")
+    total_confirmed: int = Field(..., description="Total confirmed cases")
+    total_deaths: int = Field(..., description="Total deaths")
+    total_recovered: int = Field(..., description="Total recovered cases")
+    total_active: int = Field(..., description="Total active cases")
+    mortality_rate: float = Field(..., description="Mortality rate percentage")
+    recovery_rate: float = Field(..., description="Recovery rate percentage")
+    dates: List[str] = Field(..., description="Available dates for time series")
+    confirmed_history: List[int] = Field(..., description="Confirmed cases over time")
+    deaths_history: List[int] = Field(..., description="Deaths over time")
+    recovered_history: List[int] = Field(..., description="Recovered cases over time")
+    active_history: List[int] = Field(..., description="Active cases over time")
+    daily_new_cases: List[int] = Field(..., description="Daily new confirmed cases")
+    daily_new_deaths: List[int] = Field(..., description="Daily new deaths")
+    locations: List[LocationData] = Field(..., description="Geographic locations within the country")
+    peak_date: str = Field(..., description="Date of peak confirmed cases")
+    peak_value: int = Field(..., description="Peak confirmed cases value")
+    last_update: str = Field(..., description="Last update timestamp")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "France",
+                "total_confirmed": 40000000,
+                "total_deaths": 165000,
+                "total_recovered": 39000000,
+                "total_active": 835000,
+                "mortality_rate": 0.41,
+                "recovery_rate": 97.5,
+                "dates": ["1/22/20", "1/23/20"],
+                "confirmed_history": [0, 0],
+                "deaths_history": [0, 0],
+                "recovered_history": [0, 0],
+                "active_history": [0, 0],
+                "daily_new_cases": [0, 0],
+                "daily_new_deaths": [0, 0],
+                "locations": [],
+                "peak_date": "3/23/23",
+                "peak_value": 150000,
+                "last_update": "2024-01-07T12:00:00"
+            }
+        }

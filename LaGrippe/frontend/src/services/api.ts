@@ -73,6 +73,52 @@ export interface CountryComparisonResponse {
   last_update: string;
 }
 
+export interface CountryDetailStats {
+  name: string;
+  total_confirmed: number;
+  total_deaths: number;
+  total_recovered: number;
+  total_active: number;
+  mortality_rate: number;
+  recovery_rate: number;
+  dates: string[];
+  confirmed_history: number[];
+  deaths_history: number[];
+  recovered_history: number[];
+  active_history: number[];
+  daily_new_cases: number[];
+  daily_new_deaths: number[];
+  locations: LocationData[];
+  peak_date: string;
+  peak_value: number;
+  last_update: string;
+}
+
+export interface LinearPredictions {
+  dates: string[];
+  confirmed: number[];
+  deaths: number[];
+}
+
+export interface PolynomialTrend {
+  confirmed: number[];
+  deaths: number[];
+  confirmed_r2: number;
+  deaths_r2: number;
+}
+
+export interface PredictionResponse {
+  current_value: number;
+  current_deaths: number;
+  linear_predictions: LinearPredictions;
+  polynomial_trend: PolynomialTrend;
+  growth_rate: number;
+  days_to_10_percent_increase: number | null;
+  threshold_10_percent: number;
+  dates: string[];
+  last_update: string;
+}
+
 export const covidApi = {
   async getGlobalStats(): Promise<GlobalStats> {
     const response = await apiClient.get<GlobalStats>('/stats/global');
@@ -116,6 +162,25 @@ export const covidApi = {
 
   async clearCache(): Promise<void> {
     await apiClient.post('/stats/cache/clear');
+  },
+
+  async getCountryDetail(countryName: string): Promise<CountryDetailStats> {
+    const response = await apiClient.get<CountryDetailStats>(
+      `/stats/country-detail/${encodeURIComponent(countryName)}`
+    );
+    return response.data;
+  },
+
+  async getPredictions(): Promise<PredictionResponse> {
+    const response = await apiClient.get<PredictionResponse>('/stats/predictions');
+    return response.data;
+  },
+
+  async getCountryPredictions(countryName: string): Promise<PredictionResponse> {
+    const response = await apiClient.get<PredictionResponse>(
+      `/stats/predictions/${encodeURIComponent(countryName)}`
+    );
+    return response.data;
   },
 };
 

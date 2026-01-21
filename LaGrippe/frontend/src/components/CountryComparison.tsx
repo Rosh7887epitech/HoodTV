@@ -90,7 +90,7 @@ export function CountryComparison() {
   };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl">
+    <div className="bg-slate-900/50 border-2 border-white/20 rounded-xl p-6 shadow-lg shadow-blue-500/30 hover:bg-slate-900/60 hover:-translate-y-1 transition-all">
       <div className="flex items-center space-x-3 mb-6">
         <FaChartLine className="text-blue-400 text-2xl" />
         <h2 className="text-2xl font-bold text-white">Country Comparison</h2>
